@@ -3,7 +3,7 @@ module Resque
   module Reports
     class CacheFile
 
-      DEFAULT_EXPIRE_TIME = 1.day
+      DEFAULT_EXPIRE_TIME = 86400
       DEFAULT_CODING = 'utf-8'
 
       # TODO: Description!
