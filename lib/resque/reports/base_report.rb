@@ -3,13 +3,17 @@ module Resque
   module Reports
     class BaseReport
       # TODO: Hook initialize of successor to collect init params into @args array
-      include ActiveSupport
+      # include ActiveSupport
+      extend Forwardable
       include Encodings # include encoding constants CP1251, UTF8...
 
       class << self
         protected
 
-        attr_reader :row_object, :directory
+        attr_reader :row_object, 
+                    :directory, 
+                    :create_block
+
         attr_accessor :extension, 
                       :encoding, 
                       :source_method, 
@@ -22,10 +26,14 @@ module Resque
           @table_block = block
         end
 
+        def create(&block)
+          @create_block = block
+        end
+
         def build_table_row(row_object)
           header_collecting = false
 
-          @row_object = row_object
+          @row_object = row_object # for instance decorate methods calls
           row = @table_block.call(row_object)
 
           finish_row
@@ -43,16 +51,21 @@ module Resque
         end
       end # class methods
 
+      # Constants
+
       DEFAULT_EXTENSION = 'txt'
 
-      def initialize(*args)
-        @args = args
+      # Public instance methods
 
+      def initialize(*args)
+        create_block.call(*args) if create_block
+
+        @args = args
         extension ||= DEFAULT_EXTENSION
+
         @cache_file = CacheFile.new(directory, generate_filename, coding: encoding)
 
-        @table_header = []
-        @table_row = []
+        init_table
       end
 
       def build
@@ -60,7 +73,7 @@ module Resque
       end
 
       def bg_build
-        report_class = class.to_s
+        report_class = self.class.to_s
         args_json = @args.to_json
 
         # Check report if it already in progress and tring return its job_id...
@@ -70,7 +83,7 @@ module Resque
         ReportJob.enqueue(report_class, args_json) unless job_id
       end
 
-      delegate :filename, :exists?, :to => :cache_file
+      def_delegators :@cache_file, :filename, :exists?
 
       protected
 
@@ -88,22 +101,22 @@ module Resque
 
       private
 
-      delegate :directory, 
-               :extension, 
-               :encoding,
-               :get_data, 
-               :build_table_header, 
-               :build_table_row,
-               :header_collecting, 
-               :row_object,
-               :to => 'self.class'
-      
-      def generate_filename
-        "#{ self.class }-#{ hash_args }.#{ extension }"
-      end
+      def_delegators 'self.class',
+                     :directory, 
+                     :extension, 
+                     :encoding,
+                     :get_data, 
+                     :build_table_header, 
+                     :build_table_row,
+                     :header_collecting, 
+                     :row_object,
+                     :create_block
 
-      def hash_args
-        Digest::SHA1.hexdigest(@args.to_json)
+      # Fill report table #
+
+      def init_table
+        @table_header = []
+        @table_row = []
       end
 
       def add_column_header(column_name)
@@ -122,6 +135,16 @@ module Resque
 
       def finish_row
         @table_row = []
+      end
+
+      # Generate filename #
+      
+      def generate_filename
+        "#{ self.class }-#{ hash_args }.#{ extension }"
+      end
+
+      def hash_args
+        Digest::SHA1.hexdigest(@args.to_json)
       end
     end # class BaseReport
   end # module Report

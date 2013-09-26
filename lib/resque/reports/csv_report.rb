@@ -16,7 +16,7 @@ module Resque
 
       def initialize(*args)
         csv_options = DEFAULT_CSV_OPTIONS.merge(csv_options)
-        super(args)
+        super(*args)
       end
 
       # Callbacks
@@ -31,11 +31,10 @@ module Resque
         progress = 0
 
         CSV(io, csv_options) do |csv|
-          write_line csv, build_table_header
-
           data_collection = get_data
           
           if data_collection.size > 0
+            write_line csv, build_table_header
 
             data_collection.each do |data_element|
               begin
