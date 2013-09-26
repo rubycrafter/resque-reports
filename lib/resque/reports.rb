@@ -1,6 +1,8 @@
 # coding: utf-8
-require 'resque-integration'
+require 'forwardable'
 require 'facets/kernel/constant'
+
+require 'resque-integration'
 
 require 'resque/reports/version'
 require 'resque/reports/cache_file'
