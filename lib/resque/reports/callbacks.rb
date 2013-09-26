@@ -2,14 +2,15 @@
 module Resque
   module Reports
     module Callbacks
-      extend ActiveSupport::Concern
 
+      # TODO: сделать гибкой логику колбеков и хендлеров
     	module ClassMethods
         protected
 
-    		PROGRESS_INTERVAL = 10
+    	  PROGRESS_INTERVAL = 10
 
         # Callbacks
+
         # rubocop:disable TrivialAccessors
 
         # Set callback for watching progress of export
@@ -39,7 +40,11 @@ module Resque
         def handle_error
           @error_callback ? @error_callback.call($ERROR_INFO) : raise
         end
-    	end    	
+      end    	
+    end
+
+    def self.included(base)
+      base.extend ClassMethods
     end
   end
 end

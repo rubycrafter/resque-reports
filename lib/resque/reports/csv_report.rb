@@ -2,6 +2,7 @@
 module Resque
   module Reports
     class CsvReport < BaseReport
+      extend Forwardable
       include Callbacks # include on_progress, on_error callbacks, and handle_progress, handle_errors handlers
 
       class << self
@@ -12,11 +13,11 @@ module Resque
 
       extension :csv
 
-      delegate :csv_options, :to => 'self.class'
+      def_delegator 'self.class', :csv_options
 
       def initialize(*args)
         csv_options = DEFAULT_CSV_OPTIONS.merge(csv_options)
-        super(args)
+        super(*args)
       end
 
       # Callbacks
@@ -31,11 +32,10 @@ module Resque
         progress = 0
 
         CSV(io, csv_options) do |csv|
-          write_line csv, build_table_header
-
           data_collection = get_data
           
           if data_collection.size > 0
+            write_line csv, build_table_header
 
             data_collection.each do |data_element|
               begin
