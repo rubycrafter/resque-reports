@@ -20,7 +20,7 @@ module Resque
                       :table_block, 
                       :header_collecting
         
-        alias_method :source_method, :source
+        alias_method :source, :source_method
 
         def table(&block)
           @table_block = block

@@ -19,7 +19,7 @@ module Resque
       def exists?
         File.exists?(@filename)
       end
-      alias_method :exists?, :ready?
+      alias_method :ready?, :exists?
 
       def filename
         raise "File doesn't exists, check for its existance before" unless exists?
