@@ -26,11 +26,15 @@ module Resque
         @filename
       end
 
-      def open
+      def open(force = false)
         prepare_cache_dir
 
+        if File.exists?(@filename)
+          force ? FileUtils.rm_f(@filename) : return
+        end
+
         remove_unfinished_on_error do
-          File.open(@filename, @coding) do |file|
+          File.open(@filename, "w:#{@coding}") do |file|
             yield file
           end
         end
@@ -56,7 +60,7 @@ module Resque
       end
 
       def cache_files_array
-        Dir.new(@dir).map { |fname| File.join(@dir.path, fname) }
+        Dir.new(@dir).map { |fname| File.join(@dir, fname) }
       end
 
       def remove_unfinished_on_error

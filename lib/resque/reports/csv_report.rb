@@ -21,8 +21,8 @@ module Resque
       end
 
       # Callbacks
-      on_progress { |progress, total| at(progress, total, progress_message(progress, total)) }
-      on_error { |error| raise error }
+      # on_progress { |progress, total| at(progress, total, progress_message(progress, total)) }
+      # on_error { |error| raise error }
 
       # You must use ancestor methods to work with data:
       #   1) get_data => returns Enumerable of source objects

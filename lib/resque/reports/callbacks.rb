@@ -5,8 +5,6 @@ module Resque
 
       # TODO: сделать гибкой логику колбеков и хендлеров
     	module ClassMethods
-        protected
-
     	  PROGRESS_INTERVAL = 10
 
         # Callbacks
