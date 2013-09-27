@@ -13,9 +13,11 @@ module Resque
         raise "Resque::Reports::ReportJob can work only with successors of Resque::Reports::BaseReport, but got #{report_class}" unless report_class.ancestors.include? BaseReport
 
         args = Json.parse(args_json)
+        force = args.pop
+        
         report = report_class.new *args
 
-        report.build
+        report.build(force)
       end
     end # class ReportJob
   end # module Reports
