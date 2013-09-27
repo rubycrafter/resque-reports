@@ -1,4 +1,6 @@
 # coding: utf-8
+require 'facets'
+
 module Resque
   module Reports
     # ReportJob accepts report_type and current report arguments to build it in background
