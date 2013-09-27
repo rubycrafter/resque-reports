@@ -1,11 +1,12 @@
 # coding: utf-8
+# coding: utf-8
 module Resque
   module Reports
     module Callbacks
 
       # TODO: сделать гибкой логику колбеков и хендлеров
-    	module ClassMethods
-    	  PROGRESS_INTERVAL = 10
+      module ClassMethods
+        PROGRESS_INTERVAL = 10
 
         # Callbacks
 
@@ -28,6 +29,10 @@ module Resque
 
         # rubocop:enable TrivialAccessors
 
+        
+      end
+
+      module InstanceMethods
         # Handlers
         def handle_progress(progress, force = false)
           if @progress_callback && (force || progress % self.class::PROGRESS_INTERVAL == 0)
@@ -38,11 +43,12 @@ module Resque
         def handle_error
           @error_callback ? @error_callback.call($ERROR_INFO) : raise
         end
-      end    	
-    end
-
-    def self.included(base)
-      base.extend ClassMethods
+      end
+      
+      def self.included(base)
+        base.extend ClassMethods
+        base.send :include, InstanceMethods
+      end
     end
   end
 end
