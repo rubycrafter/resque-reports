@@ -1,4 +1,6 @@
 # coding: utf-8
+require 'csv'
+
 module Resque
   module Reports
     class CsvReport < BaseReport
@@ -6,23 +8,25 @@ module Resque
       include Callbacks # include on_progress, on_error callbacks, and handle_progress, handle_errors handlers
 
       class << self
-        attr_accessor :csv_options
+        attr_accessor :options
+
+        alias_method :csv_options, :options=
       end 
 
       DEFAULT_CSV_OPTIONS = { col_sep: ';', row_sep: "\r\n" }
 
       extension :csv
 
-      def_delegator 'self.class', :csv_options
+      def_delegators TO_EIGENCLASS, :options, :csv_options
 
       def initialize(*args)
-        csv_options = DEFAULT_CSV_OPTIONS.merge(csv_options)
+        csv_options DEFAULT_CSV_OPTIONS.merge(options)
         super(*args)
       end
 
       # Callbacks
-      # on_progress { |progress, total| at(progress, total, progress_message(progress, total)) }
-      # on_error { |error| raise error }
+      on_progress { |progress, total| at(progress, total, progress_message(progress, total)) }
+      on_error { |error| raise error }
 
       # You must use ancestor methods to work with data:
       #   1) get_data => returns Enumerable of source objects
@@ -31,24 +35,20 @@ module Resque
       def write(io)        
         progress = 0
 
-        CSV(io, csv_options) do |csv|
-          data_collection = get_data
-          
-          if data_collection.size > 0
-            write_line csv, build_table_header
+        CSV(io, options) do |csv|
+          write_line csv, build_table_header
 
-            data_collection.each do |data_element|
-              begin
-                write_line csv, build_table_row(data_element)
-              rescue
-                handle_error
-              end
-
-              handle_progress(progress += 1)
+          data_each do |data_element|
+            begin
+              write_line csv, build_table_row(data_element)
+            rescue
+              handle_error
             end
 
-            handle_progress(progress, true)
+            handle_progress(progress += 1)
           end
+
+          handle_progress(progress, true)         
         end       
       end
 

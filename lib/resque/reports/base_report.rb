@@ -148,7 +148,7 @@ module Resque
         job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
         
         # ...and start new job otherwise
-        ReportJob.enqueue(report_class, args_json) unless job_id
+        job_id || ReportJob.enqueue(report_class, args_json)
       end
 
       def_delegators :@cache_file, :filename, :exists?
