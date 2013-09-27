@@ -16,6 +16,6 @@ require 'resque/reports/csv_report'
 
 module Resque
   module Reports
-  	ActiveSupport::Dependencies.autoload_paths << "#{File.dirname(__FILE__)}../../app/jobs"
+  	
   end
 end

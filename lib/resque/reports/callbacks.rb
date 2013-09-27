@@ -3,7 +3,6 @@
 module Resque
   module Reports
     module Callbacks
-
       # TODO: сделать гибкой логику колбеков и хендлеров
       module ClassMethods
         PROGRESS_INTERVAL = 10
@@ -27,9 +26,7 @@ module Resque
           @error_callback = block
         end
 
-        # rubocop:enable TrivialAccessors
-
-        
+        # rubocop:enable TrivialAccessors        
       end
 
       module InstanceMethods
