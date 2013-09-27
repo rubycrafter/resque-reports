@@ -5,7 +5,7 @@ module Resque
       # TODO: Hook initialize of successor to collect init params into @args array
       # include ActiveSupport
       extend Forwardable
-      extend Encodings # include encoding constants CP1251, UTF8...
+      include Encodings # include encoding constants CP1251, UTF8...
 
       class << self
         protected

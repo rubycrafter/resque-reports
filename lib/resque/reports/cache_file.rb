@@ -1,10 +1,13 @@
 # coding: utf-8
+require 'resque/reports/encodings'
+
 module Resque
   module Reports
     class CacheFile
+      include Encodings
 
       DEFAULT_EXPIRE_TIME = 86400
-      DEFAULT_CODING = 'utf-8'
+      DEFAULT_CODING = UTF8
 
       # TODO: Description!
       def initialize(dir, filename, options = {})
