@@ -66,7 +66,7 @@ module Resque
         end
 
         def data_size
-          @data_size ||= @data.size
+          @data_size ||= @data.count
         end
 
         # Fill report table #
@@ -97,6 +97,20 @@ module Resque
         def finish_row
           @table_row = []
         end
+
+        # extra
+
+        def method_missing(method_name, *args, &block)
+          if get_instance.respond_to?(method_name)
+            get_instance.send(method_name, *args, &block)
+          else
+            super
+          end
+        end
+
+        def respond_to?(method, include_private = false)
+          super || get_instance.respond_to?(method, include_private)
+        end
       end # class methods
 
       # Constants #
@@ -115,6 +129,7 @@ module Resque
                      :create_block,
                      :init_table,
                      :set_instance,
+                     :get_instance,
                      :extension,
                      :on_progress,
                      :on_error
@@ -180,6 +195,8 @@ module Resque
       def write(io, force)
         raise NotImplementedError, "write must be implemented in successor"
       end
+
+
 
       private
 
