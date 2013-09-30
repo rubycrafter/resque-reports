@@ -54,7 +54,7 @@ module Resque
 
         def build_table_header
           @header_collecting = true
-          @table_block.call(Hash.new)
+          @table_block.call(Extensions::Dummy.new)
         end
 
         def data_each(force = false)
@@ -186,11 +186,11 @@ module Resque
       # Generate filename #
 
       def generate_filename
-        "#{ self.class }-#{ hash_args }.#{ file_extension }"
+        "#{ hash_args }.#{ file_extension }"
       end
 
       def hash_args
-        Digest::SHA1.hexdigest(@args.to_json)
+        Digest::SHA1.hexdigest("#{self.class}-#{@args.to_json}")
       end
     end # class BaseReport
   end # module Report
