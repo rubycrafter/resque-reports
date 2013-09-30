@@ -54,7 +54,7 @@ module Resque
 
         def build_table_header
           @header_collecting = true
-          @table_block.call(nil)
+          @table_block.call(Hash.new)
         end
 
         def data_each(force = false)
