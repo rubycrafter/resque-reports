@@ -5,7 +5,8 @@ module Resque
     module Callbacks
       # TODO: сделать гибкой логику колбеков и хендлеров
       module ClassMethods
-        PROGRESS_INTERVAL = 10
+
+        attr_reader :progress_callback, :error_callback
 
         # Callbacks
 
@@ -26,22 +27,28 @@ module Resque
           @error_callback = block
         end
 
-        # rubocop:enable TrivialAccessors        
+        # rubocop:enable TrivialAccessors
       end
 
       module InstanceMethods
+        extend Forwardable
+
+        PROGRESS_INTERVAL = 10
+
+        def_delegators 'self.class', :progress_callback, :error_callback
+
         # Handlers
-        def handle_progress(progress, force = false)
-          if @progress_callback && (force || progress % self.class::PROGRESS_INTERVAL == 0)
-            @progress_callback.call progress, @data.size
+        def handle_progress(progress, total, force = false)
+          if progress_callback && (force || progress % PROGRESS_INTERVAL == 0)
+            progress_callback.call progress, total
           end
         end
 
         def handle_error
-          @error_callback ? @error_callback.call($ERROR_INFO) : raise
+          error_callback ? error_callback.call($ERROR_INFO) : raise
         end
       end
-      
+
       def self.included(base)
         base.extend ClassMethods
         base.send :include, InstanceMethods

@@ -3,9 +3,9 @@ module Resque
   module Reports
     class BaseReport
       # TODO: Hook initialize of successor to collect init params into @args array
-      # include ActiveSupport
       extend Forwardable
       include Encodings # include encoding constants CP1251, UTF8...
+      include Callbacks # include on_progress, on_error callbacks, and handle_progress, handle_errors handlers
 
       class << self
         protected
@@ -15,11 +15,11 @@ module Resque
                     :table_block,
                     :header_collecting
 
-        attr_accessor :file_extension, 
-                      :file_encoding,                      
-                      :file_directory, 
-                      :source_method       
-        
+        attr_accessor :file_extension,
+                      :file_encoding,
+                      :file_directory,
+                      :source_method
+
         alias_method :source, :source_method=
         alias_method :extension, :file_extension=
         alias_method :encoding, :file_encoding=
@@ -57,12 +57,16 @@ module Resque
           @table_block.call(nil)
         end
 
-        def data_each
-          if data = @instance.send(@source_method)
-            data.each do |element|
-              yield element              
-            end
+        def data_each(force = false)
+          @data = @instance.send(@source_method) if force || @data.nil?
+
+          @data.each do |element|
+            yield element
           end
+        end
+
+        def data_size
+          @data_size ||= @data.size
         end
 
         # Fill report table #
@@ -101,16 +105,19 @@ module Resque
       TO_EIGENCLASS = 'self.class'
 
       def_delegators TO_EIGENCLASS,
-                     :file_directory, 
+                     :file_directory,
                      :file_extension,
                      :file_encoding,
-                     :data_each, 
-                     :build_table_header, 
+                     :data_each,
+                     :data_size,
+                     :build_table_header,
                      :build_table_row,
                      :create_block,
                      :init_table,
                      :set_instance,
-                     :extension
+                     :extension,
+                     :on_progress,
+                     :on_error
 
       # Public instance methods #
 
@@ -135,7 +142,7 @@ module Resque
       def build(force = false)
         init_table if force
 
-        @cache_file.open(force) { |file| write file }
+        @cache_file.open(force) { |file| write(file, force) }
       end
 
       def bg_build(force = false)
@@ -146,27 +153,38 @@ module Resque
 
         # Check report if it already in progress and tring return its job_id...
         job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
-        
+
         # ...and start new job otherwise
-        job_id || ReportJob.enqueue(report_class, args_json)
+        job_id || ReportJob.enqueue(report_class, args_json).try(:meta_id)
       end
 
       def_delegators :@cache_file, :filename, :exists?
 
+      # Can be overridden in successors
+      def progress_message(p,t)
+        nil
+      end
+
+      # Can be overridden in successors
+      def error_handling(e)
+        raise e
+      end
+
       protected
 
       # You must use ancestor methods to work with report data:
-      #   1) data_each => yields given block for each source data element
-      #   2) build_table_header => returns Array of report column names
-      #   3) build_table_row(object) => returns Array of report cell values (same order as header)
-      def write(io)
-        raise NotImplementedError, "write must be implemented in successor"          
+      #   1) data_size => returns source data size
+      #   2) data_each => yields given block for each source data element
+      #   3) build_table_header => returns Array of report column names
+      #   4) build_table_row(object) => returns Array of report cell values (same order as header)
+      def write(io, force)
+        raise NotImplementedError, "write must be implemented in successor"
       end
 
       private
 
       # Generate filename #
-      
+
       def generate_filename
         "#{ self.class }-#{ hash_args }.#{ file_extension }"
       end
