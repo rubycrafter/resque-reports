@@ -28,7 +28,7 @@ class MyReport < MyTypeReport
 
   table do |element|
     column 'First one', :decorate_first
-    column 'Second', "#{element[:two]} - is second"
+    column 'Second', decorate_second(element[:two])
   end
 
   create do |param|
@@ -37,6 +37,10 @@ class MyReport < MyTypeReport
 
   def decorate_first(element)
     "decorated: #{element[:one]}"
+  end
+
+  def decorate_second(text)
+    "#{text} - is second"
   end
 
   def select_data
