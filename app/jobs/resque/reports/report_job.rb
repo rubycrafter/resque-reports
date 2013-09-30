@@ -1,5 +1,6 @@
 # coding: utf-8
-require 'facets'
+require 'facets/kernel/constant'
+require 'json'
 
 module Resque
   module Reports
@@ -14,11 +15,11 @@ module Resque
         report_class = constant(report_type) # Get report class from string (through ActiveSupport)
         raise "Resque::Reports::ReportJob can work only with successors of Resque::Reports::BaseReport, but got #{report_class}" unless report_class.ancestors.include? BaseReport
 
-        args = Json.parse(args_json)
+        args = JSON.parse(args_json)
         force = args.pop
-        
-        report = report_class.new *args
 
+        report = report_class.new *args
+        
         report.build(force)
       end
     end # class ReportJob
