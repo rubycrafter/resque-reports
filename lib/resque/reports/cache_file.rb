@@ -1,6 +1,4 @@
 # coding: utf-8
-require 'resque/reports/encodings'
-
 module Resque
   module Reports
     class CacheFile
