@@ -8,7 +8,7 @@ module Resque
     class ReportJob
       include Resque::Integration
 
-      queue :reports
+      queue :base
       unique { |report_type, args_json| [report_type, args_json] }
 
       def self.execute(report_type, args_json)
