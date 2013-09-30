@@ -1,8 +1,5 @@
 # coding: utf-8
-require 'active_support'
-
 require 'forwardable'
-require 'facets/kernel/constant'
 
 require 'resque-integration'
 

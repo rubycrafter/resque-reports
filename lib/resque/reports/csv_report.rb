@@ -20,7 +20,7 @@ module Resque
       def_delegators TO_EIGENCLASS, :options, :csv_options
 
       def initialize(*args)
-        csv_options DEFAULT_CSV_OPTIONS.merge(options)
+        csv_options options ? DEFAULT_CSV_OPTIONS.merge(options) : DEFAULT_CSV_OPTIONS 
         super(*args)
       end
 
