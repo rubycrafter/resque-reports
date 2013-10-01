@@ -3,9 +3,13 @@ module Resque
   module Reports
     class BaseReport
       # TODO: Hook initialize of successor to collect init params into @args array
+      # TODO: refactor, separate logic in modules, class is bloated
       extend Forwardable
 
-      #include TableBuilding # init and build header, rows of table
+      # include Extensions::Constants
+      # include TableBuilding # init and build header, rows of table
+      # include FilenameGen # generate_filename method
+      # include EventTemplates # simple events handling methods with description
       include Encodings # include encoding constants CP1251, UTF8...
       include Callbacks # include on_progress, on_error callbacks, and handle_progress, handle_errors handlers
 
@@ -30,10 +34,6 @@ module Resque
 
         def set_instance(obj)
           @instance = obj
-        end
-
-        def get_instance
-          @instance
         end
 
         def table(&block)
@@ -104,15 +104,15 @@ module Resque
         # extra
 
         def method_missing(method_name, *args, &block)
-          if get_instance.respond_to?(method_name)
-            get_instance.send(method_name, *args, &block)
+          if @instance.respond_to?(method_name)
+            @instance.send(method_name, *args, &block)
           else
             super
           end
         end
 
         def respond_to?(method, include_private = false)
-          super || get_instance.respond_to?(method, include_private)
+          super || @instance.respond_to?(method, include_private)
         end
       end # class methods
 
@@ -132,7 +132,6 @@ module Resque
                      :create_block,
                      :init_table,
                      :set_instance,
-                     :get_instance,
                      :extension,
                      :on_progress,
                      :on_error
