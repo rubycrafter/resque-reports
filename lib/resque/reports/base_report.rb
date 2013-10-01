@@ -4,8 +4,11 @@ module Resque
     class BaseReport
       # TODO: Hook initialize of successor to collect init params into @args array
       extend Forwardable
+
+      #include TableBuilding # init and build header, rows of table
       include Encodings # include encoding constants CP1251, UTF8...
       include Callbacks # include on_progress, on_error callbacks, and handle_progress, handle_errors handlers
+
 
       class << self
         protected
@@ -175,6 +178,9 @@ module Resque
 
       def_delegators :@cache_file, :filename, :exists?
 
+      # Events handling:
+      #   * You may use @meta_id and get_meta inside, which are defined by Resque
+
       # Can be overridden in successors
       def progress_message(p,t)
         nil
@@ -195,8 +201,6 @@ module Resque
       def write(io, force)
         raise NotImplementedError, "write must be implemented in successor"
       end
-
-
 
       private
 
