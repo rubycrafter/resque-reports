@@ -1,38 +1,40 @@
 # coding: utf-8
 require 'spec_helper'
-require 'resque/reports'
+require 'resque-reports'
 
-class Resque::Reports::MyCsvReport < Resque::Reports::CsvReport
-  source :select_data
-  encoding UTF8
+module Reports
+  class MyCsvReport < Resque::Reports::CsvReport
+    source :select_data
+    encoding UTF8
 
-  directory File.join(Dir.home, '.resque-reports')
+    directory File.join(Dir.home, '.resque-reports')
 
-  table do |element|
-    column 'First', "#{element} - is first"
-  end
+    table do |element|
+      column 'First', "#{element} - is first"
+    end
 
-  create do |param1, param2|
-    @main_param = param1
-    @secondary_param = param2
-  end
+    create do |param1, param2|
+      @main_param = param1
+      @secondary_param = param2
+    end
 
-  def select_data
-    [:one, @main_param]
+    def select_data
+      [:one, @main_param]
+    end
   end
 end
 
 describe Resque::Reports::ReportJob do
-  let(:my_report) { Resque::Reports::MyCsvReport.new('.execute test','test') }
-  let(:exec_params) { ['Resque::Reports::MyCsvReport', "[\".execute test\", \"test\",true]"] }
+  let(:my_report) { Reports::MyCsvReport.new('.execute test','test') }
+  let(:exec_params) { ['Reports::MyCsvReport', "[\".execute test\", \"test\",true]"] }
 
   describe '.execute' do
-    before { Resque::Reports::MyCsvReport.stub(:new => my_report) }
+    before { Reports::MyCsvReport.stub(:new => my_report) }
 
     context 'when building report' do
       before { my_report.stub(:build => nil) }
 
-      it { expect(Resque::Reports::MyCsvReport).to receive(:new).with('.execute test','test') }
+      it { expect(Reports::MyCsvReport).to receive(:new).with('.execute test','test') }
       it { expect(my_report).to receive(:build).with(true) }
 
       after { Resque::Reports::ReportJob.execute(*exec_params) }
@@ -66,12 +68,11 @@ describe Resque::Reports::ReportJob do
       end
 
       context 'when works custom handlers' do
-        before do
-          my_report.stub(:error_handling) { |e| raise "Boom! #{e.message}" }
-        end
-
         context 'when error occurs' do
-          before { my_report.stub(:build_table_row) { raise 'Custom error' } }
+          before do
+            my_report.stub(:error_handling) { |e| raise "Boom! #{e.message}" }
+            my_report.stub(:build_table_row) { raise 'Custom error' }
+          end
 
           it { expect { Resque::Reports::ReportJob.execute(*exec_params) }.to raise_error("Boom! Custom error") }
         end
@@ -85,6 +86,17 @@ describe Resque::Reports::ReportJob do
           it { described_class.should_receive(:at).with(2, 2, 'my progress: 2 / 2') }
 
           after { Resque::Reports::ReportJob.execute(*exec_params) }
+        end
+      end
+
+      context 'when task is performed by resque' do
+        context 'when error occurs' do
+          before do
+            my_report.stub(:error_handling) { |e| raise "Boom! #{e.message}" }
+            my_report.stub(:build_table_row) { raise 'Custom error' }
+          end
+
+          it { expect { Resque::Reports::ReportJob.execute(*exec_params) }.to raise_error("Boom! Custom error") }
         end
       end
     end
