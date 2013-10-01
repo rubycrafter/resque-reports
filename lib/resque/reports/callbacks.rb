@@ -1,5 +1,4 @@
 # coding: utf-8
-# coding: utf-8
 module Resque
   module Reports
     module Callbacks
