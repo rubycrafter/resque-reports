@@ -18,6 +18,10 @@ module Resque
           true
         end
       end
+
+      module Constants
+        TO_EIGENCLASS = 'self.class'
+      end
     end
   end
 end

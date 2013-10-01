@@ -1,5 +1,6 @@
 # coding: utf-8
 require 'json'
+require 'active_support'
 
 module Resque
   module Reports
@@ -11,7 +12,8 @@ module Resque
       unique { |report_type, args_json| [report_type, args_json] }
 
       def self.execute(report_type, args_json)
-        report_class = Extensions.constant(report_type) # Get report class from string (through ActiveSupport)
+        # report_class = Extensions.constant(report_type) # Get report class from string (through ActiveSupport)
+        report_class = report_type.constantize
         raise "Resque::Reports::ReportJob can work only with successors of Resque::Reports::BaseReport, but got #{report_class}" unless report_class.ancestors.include? BaseReport
 
         args = JSON.parse(args_json)
