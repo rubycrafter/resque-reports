@@ -80,7 +80,7 @@ describe 'Resque::Reports::BaseReport successor' do
   describe '#encoding' do
     subject { my_report.instance_variable_get(:@cache_file) }
 
-    it { subject.instance_variable_get(:@coding).should eq Resque::Reports::Encodings::UTF8 }
+    it { subject.instance_variable_get(:@coding).should eq Resque::Reports::Extensions::Encodings::UTF8 }
   end
 
   describe '#write' do
