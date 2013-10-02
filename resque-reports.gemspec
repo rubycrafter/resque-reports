@@ -8,8 +8,8 @@ Gem::Specification.new do |gem|
   gem.version       = Resque::Reports::VERSION
   gem.authors       = ['Sergey D.']
   gem.email         = ['sclinede@gmail.com']
-  gem.description   = 'Make your custom reports to CSV in background with Resque by simple DSL'
-  gem.summary       = 'resque-reports 0.0.1'
+  gem.description   = 'Make your custom reports to CSV in background using Resque with simple DSL'
+  gem.summary       = 'resque-reports'
   gem.homepage      = 'https://github.com/sclinede/resque-reports'
   gem.license       = "MIT"
 
@@ -19,6 +19,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ['lib']
 
   gem.add_dependency 'resque-integration', '~> 0.2.9'
+  gem.add_dependency 'activesupport' # избавиться от зависимости
 
   gem.add_development_dependency "bundler", "~> 1.3"
   gem.add_development_dependency "rake"
