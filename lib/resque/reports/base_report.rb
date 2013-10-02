@@ -2,7 +2,6 @@
 module Resque
   module Reports
     class BaseReport
-      # TODO: Hook initialize of successor to collect init params into @args array
       extend Forwardable
       include Extensions      
 
@@ -50,6 +49,8 @@ module Resque
 
       DEFAULT_EXTENSION = 'txt'
 
+      # Delegators #
+
       def_delegators Const::TO_EIGENCLASS,
                      :file_directory,
                      :file_extension,
@@ -72,6 +73,7 @@ module Resque
         end
 
         @args = args
+        # self.class.superclass - is VERY VERY ugly! Refactor me, please!
         extension self.class.superclass.send(:file_extension) || DEFAULT_EXTENSION
 
         @cache_file = CacheFile.new(file_directory, generate_filename(args, file_extension), coding: file_encoding)
@@ -93,12 +95,9 @@ module Resque
 
         # Check report if it already in progress and tring return its job_id...
         job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
-
         # ...and start new job otherwise
         job_id || ReportJob.enqueue(report_class, args_json).try(:meta_id)
       end
-
-
 
       protected
 
