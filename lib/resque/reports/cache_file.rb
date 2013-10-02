@@ -2,7 +2,7 @@
 module Resque
   module Reports
     class CacheFile
-      include Encodings
+      include Extensions::Encodings
 
       DEFAULT_EXPIRE_TIME = 86400
       DEFAULT_CODING = UTF8
