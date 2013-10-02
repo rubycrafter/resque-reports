@@ -24,10 +24,11 @@ module Resque
         super(*args)
       end
 
-      # You must use ancestor methods to work with data:
-      #   1) get_data => returns Enumerable of source objects
-      #   2) build_table_header => returns Array of column names
-      #   3) build_table_row(object) => returns Array of cell values (same order as header)
+      # You must use ancestor methods to work with report data:
+      #   1) data_size => returns source data size
+      #   2) data_each => yields given block for each source data element
+      #   3) build_table_header => returns Array of report column names
+      #   4) build_table_row(object) => returns Array of report cell values (same order as header)
       def write(io, force = false)
         progress = 0
 
@@ -50,6 +51,24 @@ module Resque
 
       def write_line(csv, row_cells)
         csv << row_cells
+      end
+
+      # Error handling #
+
+      def error_handling(error)
+        error_message = case error
+                        when Encoding::UndefinedConversionError
+                          "Символ #{error.error_char} не поддерживается заданной кодировкой"
+                        when EncodingError
+                          'Ошибка преобразования в заданную кодировку'
+                        else
+                          raise error
+                        end
+
+        meta = get_meta(@meta_id)
+        meta['payload'] ||= { 'error_messages' => [] }
+        meta['payload']['error_messages'] << "Выгрузка отчета невозможна. #{error_message}"
+        meta.save
       end
     end # class CsvReport
   end # module Report

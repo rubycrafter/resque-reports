@@ -20,7 +20,7 @@ module Resque
       end
 
       def self.included(base)
-        base.send :include, Const # init and build table
+        base.send :include, Const # share gem constants
         base.send :include, TableBuilding # init and build table
         base.send :include, FilenameGen # generate_filename method
         base.send :include, EventCallbacks # include on_progress, on_error callbacks, and handle_progress, handle_errors handlers
