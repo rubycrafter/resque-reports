@@ -53,7 +53,7 @@ module Resque
         csv << row_cells
       end
 
-      # Error handling #
+      # Event handling #
 
       def error_handling(error)
         error_message = case error
