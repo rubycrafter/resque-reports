@@ -10,7 +10,7 @@ module Resque
         end
 
         def hash(*args)
-          Digest::SHA1.hexdigest("#{ args }")
+          Digest::SHA1.hexdigest(args.to_s)
         end
       end
     end
