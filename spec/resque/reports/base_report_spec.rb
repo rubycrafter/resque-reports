@@ -98,6 +98,18 @@ describe 'Resque::Reports::BaseReport successor' do
   end
 
   describe '#bg_build' do
+    context 'when report is building twice' do
+      subject { MyReport.new('#bg_build test') }
+
+      before { Resque::Reports::ReportJob.stub(:enqueue => 'job_id') }
+
+      it { Resque::Reports::ReportJob.should_receive(:enqueue).with("MyReport", "[\"#bg_build test\",true]").twice }
+
+      after do
+        2.times { subject.bg_build true }
+      end
+    end
+
     context 'when report is building' do
       subject { MyReport.new('#bg_build test') }
 

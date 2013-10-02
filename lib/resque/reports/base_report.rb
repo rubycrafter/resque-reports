@@ -90,8 +90,7 @@ module Resque
       def bg_build(force = false)
         report_class = self.class.to_s
 
-        @args << force
-        args_json = @args.to_json
+        args_json = [*@args, force].to_json
 
         # Check report if it already in progress and tring return its job_id...
         job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
