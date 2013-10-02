@@ -6,7 +6,7 @@ module Resque
         private
 
         def generate_filename(args, fextension)
-          "#{ hash(self.class, *args) }.#{ fextension }"
+          "#{ hash(self.class.to_s, *args) }.#{ fextension }"
         end
 
         def hash(*args)
