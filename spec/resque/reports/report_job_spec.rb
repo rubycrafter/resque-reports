@@ -51,6 +51,18 @@ describe Resque::Reports::ReportJob do
     end
 
     context 'when events are firing' do
+      context 'when progress total is zero' do
+        before do
+          my_report.stub(:select_data => [])
+          my_report.stub(:data_size => 0)
+          described_class.stub(:at => nil)
+        end
+
+        it { described_class.should_not_receive(:at) }
+
+        after { Resque::Reports::ReportJob.execute(*exec_params) }
+      end
+
       context 'when works default handlers' do
         context 'when error occurs' do
           before { my_report.stub(:build_table_row) { raise 'Custom error' } }
