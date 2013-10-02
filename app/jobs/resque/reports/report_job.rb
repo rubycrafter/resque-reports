@@ -21,7 +21,7 @@ module Resque
 
         report = report_class.new *args
 
-        report_class.on_progress { |progress, total| at(progress, total, report.progress_message(progress,total)) }
+        report_class.on_progress { |progress, total| at(progress, total, report.progress_message(progress,total)) unless total.zero? }
         report_class.on_error { |error| report.error_handling(error) }
 
         report.build(force)
