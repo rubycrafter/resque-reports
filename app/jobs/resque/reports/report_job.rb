@@ -8,12 +8,11 @@ module Resque
     class ReportJob
       include Resque::Integration
 
-      queue :base
-      unique { |report_type, args_json| [report_type, args_json] }
+      queue :base # TODO: change queue to work separetly
+      unique
 
       def self.execute(report_type, args_json)
-        # report_class = Extensions.constant(report_type) # Get report class from string (through ActiveSupport)
-        report_class = report_type.constantize
+        report_class = report_type.constantize # избавиться от зависимости ActiveSupport
         raise "Resque::Reports::ReportJob can work only with successors of Resque::Reports::BaseReport, but got #{report_class}" unless report_class.ancestors.include? BaseReport
 
         args = JSON.parse(args_json)
