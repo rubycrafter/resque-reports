@@ -1,0 +1,18 @@
+# This is the configuration used to check the rubocop source code.
+# inherit_from: config/default.yml
+
+MethodLength:
+  Max: 20
+LineLength:
+  Max: 80
+
+AsciiComments:
+  Enabled: false
+SpaceInsideHashLiteralBraces:
+  EnforcedStyleIsWithSpaces: false
+Documentation:
+  Enabled: false
+TrivialAccessors:
+  Enabled: false
+EmptyLiteral:
+  Enabled: false

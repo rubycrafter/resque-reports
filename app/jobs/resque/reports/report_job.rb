@@ -4,26 +4,58 @@ require 'active_support'
 
 module Resque
   module Reports
-    # ReportJob accepts report_type and current report arguments to build it in background
+    # ReportJob accepts report_type, its arguments in json
+    # and building report in background
+    # @example:
+    #
+    #    ReportJob.enqueue('Resque::Reports::MyReport', [1, 2].to_json)
+    #
     class ReportJob
       include Resque::Integration
 
-      queue :base # TODO: change queue to work separetly
       unique
 
+      # resque-integration main job method
+      # @param [String] report_type - name of BaseReport successor
+      #                 to build report for
+      # @param [String(JSON)] args_json - json array of report arguments
       def self.execute(report_type, args_json)
-        report_class = report_type.constantize # избавиться от зависимости ActiveSupport
-        raise "Resque::Reports::ReportJob can work only with successors of Resque::Reports::BaseReport, but got #{report_class}" unless report_class.ancestors.include? BaseReport
+        report_class = report_type.constantize # избавиться от ActiveSupport
+
+        unless report_class < BaseReport
+          fail "Supports only successors of BaseReport, but got #{report_class}"
+        end
+
+        fail 'Report queue is not specified' unless report_class.job_queue
+        queue report_class.job_queue
 
         args = JSON.parse(args_json)
         force = args.pop
 
-        report = report_class.new *args
+        init_report(report_class, args)
+          .build(force)
+      end
 
-        report_class.on_progress { |progress, total| at(progress, total, report.progress_message(progress,total)) unless total.zero? }
-        report_class.on_error { |error| report.error_handling(error) }
+      private
 
-        report.build(force)
+      # Initializes report of given class with given arguments
+      def self.init_report(report_class, args_array)
+        report = report_class.new(*args_array)
+
+        report_class.on_progress do |progress, total|
+          unless total.zero?
+            at(progress, total, report.progress_message(progress, total))
+          end
+        end
+
+        report_class.on_error do |error|
+          meta = get_meta(@meta_id)
+          meta['payload'] ||= {'error_messages' => []}
+          meta['payload']['error_messages'] << report.error_message(error)
+          meta.save
+        end
+
+        report
       end
     end # class ReportJob
   end # module Reports
