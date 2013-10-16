@@ -21,10 +21,11 @@ class MyTypeReport < Resque::Reports::BaseReport
 end
 
 class MyReport < MyTypeReport
+  queue :my_type_reports
   source :select_data
   encoding UTF8
 
-  directory File.join(Dir.home, '.resque-reports')
+  directory File.join(Dir.tmpdir, 'resque-reports')
 
   table do |element|
     column 'First one', :decorate_first
@@ -56,11 +57,11 @@ describe 'Resque::Reports::BaseReport successor' do
   describe '#extension' do
     before { File.stub(:exists? => true) }
 
-    it { my_report.filename.split('.').last.should eq :type.to_s }
+    it { File.extname(my_report.filename).should eq '.type' }
   end
 
   describe '#source' do
-    before { my_report.stub(:select_data => [dummy]) }
+    before { my_report.stub(select_data: [dummy]) }
 
     it { my_report.should_receive(:select_data) }
 
@@ -69,8 +70,9 @@ describe 'Resque::Reports::BaseReport successor' do
 
   describe '#directory' do
     subject { my_report.instance_variable_get(:@cache_file) }
+    let(:tmpdir) { File.join(Dir.tmpdir, 'resque-reports') }
 
-    it { subject.instance_variable_get(:@dir).should eq File.join(Dir.home, '.resque-reports') }
+    it { subject.instance_variable_get(:@dir).should eq tmpdir }
   end
 
   describe '#create' do
@@ -79,8 +81,9 @@ describe 'Resque::Reports::BaseReport successor' do
 
   describe '#encoding' do
     subject { my_report.instance_variable_get(:@cache_file) }
+    let(:utf_coding) { Resque::Reports::Extensions::Encodings::UTF8 }
 
-    it { subject.instance_variable_get(:@coding).should eq Resque::Reports::Extensions::Encodings::UTF8 }
+    it { subject.instance_variable_get(:@coding).should eq utf_coding }
   end
 
   describe '#write' do
@@ -98,12 +101,19 @@ describe 'Resque::Reports::BaseReport successor' do
   end
 
   describe '#bg_build' do
+    let(:job_class) { Resque::Reports::ReportJob }
+
     context 'when report is building twice' do
       subject { MyReport.new('#bg_build test') }
 
-      before { Resque::Reports::ReportJob.stub(:enqueue => 'job_id') }
+      before { job_class.stub(enqueue: 'job_id') }
 
-      it { Resque::Reports::ReportJob.should_receive(:enqueue).with("MyReport", "[\"#bg_build test\",true]").twice }
+      it do
+        job_class
+          .should_receive(:enqueue)
+          .with('MyReport', '["#bg_build test",true]')
+          .twice
+      end
 
       after do
         2.times { subject.bg_build true }
@@ -113,9 +123,13 @@ describe 'Resque::Reports::BaseReport successor' do
     context 'when report is building' do
       subject { MyReport.new('#bg_build test') }
 
-      before { Resque::Reports::ReportJob.stub(:enqueue => 'job_id') }
+      before { job_class.stub(enqueue: 'job_id') }
 
-      it { Resque::Reports::ReportJob.should_receive(:enqueue).with("MyReport", "[\"#bg_build test\",true]") }
+      it do
+        job_class
+          .should_receive(:enqueue)
+          .with('MyReport', '["#bg_build test",true]')
+      end
 
       after  { subject.bg_build true }
     end
@@ -123,7 +137,9 @@ describe 'Resque::Reports::BaseReport successor' do
     context 'when report is not build yet' do
       subject { MyReport.new('#bg_build test') }
 
-      before { Resque::Reports::ReportJob.stub(:enqueued? => double('Meta', meta_id: 'enqueued_job_id')) }
+      before do
+        job_class.stub(enqueued?: double('Meta', meta_id: 'enqueued_job_id'))
+      end
 
       it { subject.bg_build(true).should eq 'enqueued_job_id' }
     end
@@ -142,7 +158,14 @@ describe 'Resque::Reports::BaseReport successor' do
       before { subject.build true }
 
       its(:exists?) { should be_true }
-      it { File.read(subject.filename).should eq "First one|Second\r\ndecorated: one|one - is second\r\ndecorated: was built test|was built test - is second\r\n" }
+      it do
+        File.read(subject.filename)
+          .should eq <<-REPORT.gsub(/^ {12}/, '')
+            First one|Second\r
+            decorated: one|one - is second\r
+            decorated: was built test|was built test - is second\r
+          REPORT
+      end
     end
   end
 

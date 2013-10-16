@@ -1,16 +1,19 @@
 # coding: utf-8
 module Resque
   module Reports
+    # Class describes how to storage and access cache file
+    # NOTE: Every time any cache file is opening,
+    #       cache is cleared from old files.
     class CacheFile
       include Extensions::Encodings
 
-      DEFAULT_EXPIRE_TIME = 86400
+      DEFAULT_EXPIRE_TIME = 86_400
       DEFAULT_CODING = UTF8
 
-      # TODO: Description!
       def initialize(dir, filename, options = {})
         @dir = dir
         @filename = File.join(dir, filename)
+        @ext = File.extname(filename)
 
         # options
         @coding = options[:coding] || DEFAULT_CODING
@@ -23,16 +26,14 @@ module Resque
       alias_method :ready?, :exists?
 
       def filename
-        raise "File doesn't exists, check for its existance before" unless exists?
+        fail 'File doesn\'t exists, check exists? before' unless exists?
         @filename
       end
 
       def open(force = false)
         prepare_cache_dir
 
-        if File.exists?(@filename)
-          force ? FileUtils.rm_f(@filename) : return
-        end
+        force ? FileUtils.rm_f(@filename) : return if File.exists?(@filename)
 
         remove_unfinished_on_error do
           File.open(@filename, "w:#{@coding}") do |file|
@@ -50,7 +51,8 @@ module Resque
       end
 
       def clear_expired_files
-        # TODO: avoid races when worker building his report longer than @expiration_time
+        # TODO: avoid races when worker building
+        #       his report longer than @expiration_time
         files_to_delete = cache_files_array.select { |fname| expired?(fname) }
 
         FileUtils.rm_f files_to_delete
@@ -61,14 +63,19 @@ module Resque
       end
 
       def cache_files_array
-        Dir.new(@dir).map { |fname| File.join(@dir, fname) }
+        Dir.new(@dir)
+          .map { |fname| File.join(@dir, fname) if File.extname(fname) == @ext }
+          .compact
       end
 
       def remove_unfinished_on_error
         yield
       rescue => error
-        FileUtils.rm_f @filename # remove everything that was written due to it inconsistance
-        raise error # don't suppress any errors here
+        # remove everything that was written due to it inconsistance
+        FileUtils.rm_f @filename
+
+        # don't suppress any errors here
+        raise error
       end
     end
   end

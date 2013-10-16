@@ -5,10 +5,11 @@ require 'stringio'
 require 'resque/reports/csv_report'
 
 class MyCsvReport < Resque::Reports::CsvReport
+  queue :csv_reports
   source :select_data
   encoding UTF8
 
-  csv_options col_sep: ','
+  csv_options col_sep: ',', row_sep: "\n"
 
   directory File.join(Dir.home, '.resque-reports')
 
@@ -34,7 +35,7 @@ class MyCsvDefaultsReport < Resque::Reports::CsvReport
   source :select_data
   encoding UTF8
 
-  directory File.join(Dir.home, '.resque-reports')
+  directory File.join(Dir.tmpdir, 'resque-reports')
 
   table do |element|
     column 'Uno', "#{element} - is value"
@@ -58,8 +59,12 @@ describe 'Resque::Reports::CsvReport successor' do
     context 'when custom options are set' do
       subject { MyCsvReport.new('csv_options test') }
 
+      let(:my_options) do
+        MyCsvReport::DEFAULT_CSV_OPTIONS.merge(col_sep: ',', row_sep: "\n")
+      end
+
       it 'merges csv_options with defaults' do
-        subject.options.should eq MyCsvReport::DEFAULT_CSV_OPTIONS.merge(col_sep: ',')
+        subject.options.should eq my_options
       end
     end
   end
@@ -71,7 +76,14 @@ describe 'Resque::Reports::CsvReport successor' do
       before { subject.build true }
 
       its(:exists?) { should be_true }
-      it { File.read(subject.filename).should eq "First one,Second\r\ndecorated: one,one - is second\r\ndecorated: was built test,was built test - is second\r\n" }
+      it do
+        File.read(subject.filename)
+          .should eq <<-CSV.gsub(/^ {12}/, "")
+            First one,Second
+            decorated: one,one - is second
+            decorated: was built test,was built test - is second
+          CSV
+      end
     end
   end
 end
