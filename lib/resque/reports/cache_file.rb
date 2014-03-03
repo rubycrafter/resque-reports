@@ -64,8 +64,8 @@ module Resque
 
       def cache_files_array
         Dir.new(@dir)
-          .map { |fname| File.join(@dir, fname) if File.extname(fname) == @ext }
-          .compact
+           .map { |fname| File.join(@dir, fname) if File.extname(fname) == @ext }
+           .compact
       end
 
       def remove_unfinished_on_error
