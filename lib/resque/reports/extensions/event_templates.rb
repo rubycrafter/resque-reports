@@ -2,18 +2,19 @@
 module Resque
   module Reports
     module Extensions
+      # Defines base event handling methods for Resque::Reports::EventCallbacks
       module EventTemplates
-        # Events handling:
-        #   * You may use @meta_id and get_meta inside, which are defined by Resque
 
+        # Specifies progress message generation
         # Can be overridden in successors
-        def progress_message(p,t)
+        def progress_message(p, t)
           nil
         end
 
+        # Specifies error message generation
         # Can be overridden in successors
-        def error_handling(e)
-          raise e
+        def error_message(e)
+          fail e
         end
       end
     end

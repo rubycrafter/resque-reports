@@ -1,8 +1,23 @@
 # coding: utf-8
+# Resque namespace
 module Resque
+  # Resque::Reports namespace
   module Reports
+    # Resque::Reports::Extensions namespace
     module Extensions
+      # Defines report table building logic
       module TableBuilding
+        # Defines table building methods
+        #   External(DSL):
+        #     - source
+        #     - table
+        #     - column
+        #   Internal:
+        #     - init_table
+        #     - build_table_header
+        #     - build_table_row(row_object)
+        #     - data_each
+        #     - data_size
         module ClassMethods
 
           attr_accessor :source_method
@@ -27,7 +42,12 @@ module Resque
 
           def add_column_cell(column_value)
             return if @header_collecting
-            column_value = @instance.send(column_value, @row_object) if column_value.is_a? Symbol
+
+            if column_value.is_a? Symbol
+              # Smells bad... changes input variable
+              column_value = @instance.send(column_value, @row_object)
+            end
+
             @table_row << encoded_string(column_value)
           end
 
@@ -49,26 +69,33 @@ module Resque
 
           # you may override default string endcoding
           def encoded_string(obj)
-            obj.to_s.encode('utf-8', :invalid => :replace, :undef => :replace)
+            obj.to_s.encode('utf-8', invalid: :replace, undef: :replace)
           end
 
           def finish_row
             @table_row = []
           end
 
-          def data_each(force = false)
-            @data = @instance.send(@source_method) if force || @data.nil?
+          def data(force = false)
+            if force || @data.nil?
+              @data = @instance.send(@source_method)
+            else
+              @data
+            end
+          end
 
-            @data.each do |element|
+          def data_each(force = false)
+            data(force).each do |element|
               yield element
             end
           end
 
           def data_size
-            @data_size ||= @data.count
+            @data_size ||= data.count
           end
         end
 
+        # Delegates class methods to instance
         module InstanceMethods
           extend Forwardable
 

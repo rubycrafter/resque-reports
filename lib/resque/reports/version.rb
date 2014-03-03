@@ -1,5 +1,6 @@
+# coding: utf-8
 module Resque
   module Reports
-    VERSION = '0.2.6'
+    VERSION = '0.3.0'
   end
 end

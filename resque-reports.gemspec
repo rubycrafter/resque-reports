@@ -18,11 +18,12 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ['lib']
 
-  gem.add_dependency 'resque-integration', '~> 0.2.9'
+  gem.add_dependency 'resque-integration', '>= 0.2.9'
   gem.add_dependency 'activesupport' # избавиться от зависимости
 
   gem.add_development_dependency "bundler", "~> 1.3"
   gem.add_development_dependency "rake"
   gem.add_development_dependency 'rspec', '>= 2.14.0'
   gem.add_development_dependency 'rspec-given', '~> 3.0'
+  gem.add_development_dependency 'simplecov'
 end
