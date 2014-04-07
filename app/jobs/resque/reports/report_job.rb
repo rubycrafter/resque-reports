@@ -13,6 +13,7 @@ module Resque
     class ReportJob
       include Resque::Integration
 
+      queue :base # TODO: change queue to work separetly
       unique
 
       # resque-integration main job method
