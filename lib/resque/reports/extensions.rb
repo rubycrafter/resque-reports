@@ -1,5 +1,6 @@
 # coding: utf-8
 require 'resque/reports/extensions/const'
+require 'resque/reports/extensions/enqueue_to_fix'
 require 'resque/reports/extensions/event_callbacks'
 require 'resque/reports/extensions/event_templates'
 require 'resque/reports/extensions/filename_gen'
@@ -31,6 +32,7 @@ module Resque
         base.send :include, EventCallbacks # event callbacks and handlers
         base.send :include, EventTemplates # template events handling methods
         base.send :include, Encodings # encoding constants
+        base.send :include, EnqueueToFix # encoding constants
       end
     end
   end
