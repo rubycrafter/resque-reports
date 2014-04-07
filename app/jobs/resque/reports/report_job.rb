@@ -9,9 +9,11 @@ module Resque
     # @example:
     #
     #    ReportJob.enqueue('Resque::Reports::MyReport', [1, 2].to_json)
+    #    ReportJob.enqueue_to(:my_queue, 'Resque::Reports::MyReport', [1, 2].to_json)
     #
     class ReportJob
       include Resque::Integration
+      extend Extensions::EnqueueToFix
 
       unique
 
@@ -25,9 +27,6 @@ module Resque
         unless report_class < BaseReport
           fail "Supports only successors of BaseReport, but got #{report_class}"
         end
-
-        fail 'Report queue is not specified' unless report_class.job_queue
-        queue report_class.job_queue
 
         args = JSON.parse(args_json)
         force = args.pop

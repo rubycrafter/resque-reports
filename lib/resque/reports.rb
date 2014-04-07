@@ -10,6 +10,7 @@ require 'resque/reports/csv_report'
 
 require 'resque/reports/version'
 
+
 # Resque namespace
 module Resque
   # Resque::Reports namespace

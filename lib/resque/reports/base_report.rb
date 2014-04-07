@@ -62,15 +62,13 @@ module Resque
 
       class << self
 
-        attr_reader :job_queue
-
         protected
 
         attr_reader :create_block
-        attr_writer :job_queue
         attr_accessor :file_extension,
                       :file_encoding,
-                      :file_directory
+                      :file_directory,
+                      :job_queue
 
         alias_method :super_extension, :file_extension
         alias_method :extension, :file_extension=
@@ -116,6 +114,7 @@ module Resque
       #++
 
       DEFAULT_EXTENSION = 'txt'
+      DEFAULT_QUEUE = :base
 
       #--
       # Delegators
@@ -127,7 +126,8 @@ module Resque
                      :file_encoding,
                      :create_block,
                      :set_instance,
-                     :set_extension
+                     :set_extension,
+                     :job_queue
 
       def_delegators :@cache_file, :filename, :exists?, :ready?
       def_delegator Const::TO_SUPER, :super_extension
@@ -166,8 +166,9 @@ module Resque
 
         # Check report if it already in progress and tring return its job_id...
         job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
+
         # ...and start new job otherwise
-        job_id || ReportJob.enqueue(report_class, args_json).try(:meta_id)
+        job_id || ReportJob.enqueue_to(job_queue || DEFAULT_QUEUE, report_class, args_json).try(:meta_id)
       end
 
       protected

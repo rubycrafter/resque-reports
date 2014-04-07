@@ -106,13 +106,13 @@ describe 'Resque::Reports::BaseReport successor' do
     context 'when report is building twice' do
       subject { MyReport.new('#bg_build test') }
 
-      before { job_class.stub(enqueue: 'job_id') }
+      before { job_class.stub(enqueue_to: 'job_id') }
 
       it do
         job_class
-          .should_receive(:enqueue)
-          .with('MyReport', '["#bg_build test",true]')
-          .twice
+          .should_receive(:enqueue_to).twice
+          #.with(:my_type_reports, 'MyReport', '["#bg_build test",true]')
+
       end
 
       after do
@@ -123,12 +123,12 @@ describe 'Resque::Reports::BaseReport successor' do
     context 'when report is building' do
       subject { MyReport.new('#bg_build test') }
 
-      before { job_class.stub(enqueue: 'job_id') }
+      before { job_class.stub(enqueue_to: 'job_id') }
 
       it do
         job_class
-          .should_receive(:enqueue)
-          .with('MyReport', '["#bg_build test",true]')
+          .should_receive(:enqueue_to)
+          #.with(:my_type_reports, 'MyReport', '["#bg_build test",true]')
       end
 
       after  { subject.bg_build true }
