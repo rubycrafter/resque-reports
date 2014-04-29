@@ -3,6 +3,7 @@ require 'forwardable'
 require 'resque-integration'
 
 require 'resque/reports/extensions'
+require 'resque/reports/common'
 
 require 'resque/reports/cache_file'
 require 'resque/reports/base_report'
