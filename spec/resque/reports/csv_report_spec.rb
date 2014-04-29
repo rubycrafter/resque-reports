@@ -14,12 +14,17 @@ class MyCsvReport < Resque::Reports::CsvReport
   directory File.join(Dir.home, '.resque-reports')
 
   table do |element|
-    column 'First one', :decorate_first
-    column 'Second', "#{element} - is second"
+    column 'First one', decorate_first(element[:first])
+    column 'Second', "#{element[:second]} - is second"
+    column 'Third', :third, formatter: :cute_third
   end
 
   create do |param|
     @main_param = param
+  end
+
+  def self.cute_third_formatter(column_value)
+    "3'rd row element is: #{column_value}"
   end
 
   def decorate_first(element)
@@ -27,7 +32,7 @@ class MyCsvReport < Resque::Reports::CsvReport
   end
 
   def select_data
-    [:one, @main_param]
+    [{:first => :one, :second => @main_param, :third => 3}]
   end
 end
 
@@ -42,7 +47,7 @@ class MyCsvDefaultsReport < Resque::Reports::CsvReport
   end
 
   def select_data
-    [:one, @main_param]
+    []
   end
 end
 
@@ -79,9 +84,8 @@ describe 'Resque::Reports::CsvReport successor' do
       it do
         File.read(subject.filename)
           .should eq <<-CSV.gsub(/^ {12}/, "")
-            First one,Second
-            decorated: one,one - is second
-            decorated: was built test,was built test - is second
+            First one,Second,Third
+            decorated: one,was built test - is second,3'rd row element is: 3
           CSV
       end
     end

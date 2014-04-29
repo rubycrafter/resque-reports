@@ -28,16 +28,12 @@ class MyReport < MyTypeReport
   directory File.join(Dir.tmpdir, 'resque-reports')
 
   table do |element|
-    column 'First one', :decorate_first
+    column 'First one', :one
     column 'Second', decorate_second(element[:two])
   end
 
   create do |param|
     @main_param = param
-  end
-
-  def decorate_first(element)
-    "decorated: #{element[:one]}"
   end
 
   def decorate_second(text)
@@ -148,7 +144,7 @@ describe 'Resque::Reports::BaseReport successor' do
   describe '#build' do
     subject { MyReport.new('#build test') }
 
-    it { subject.should_receive(:decorate_first).twice }
+    it { subject.should_receive(:decorate_second).exactly(3).times }
 
     after  { subject.build true }
 
@@ -162,8 +158,8 @@ describe 'Resque::Reports::BaseReport successor' do
         File.read(subject.filename)
           .should eq <<-REPORT.gsub(/^ {12}/, '')
             First one|Second\r
-            decorated: one|one - is second\r
-            decorated: was built test|was built test - is second\r
+            one|one - is second\r
+            was built test|was built test - is second\r
           REPORT
       end
     end
