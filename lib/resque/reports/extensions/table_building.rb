@@ -1,3 +1,4 @@
+require 'active_support/core_ext/hash/indifferent_access'
 # coding: utf-8
 # Resque namespace
 module Resque
@@ -19,7 +20,6 @@ module Resque
         #     - data_each
         #     - data_size
         module ClassMethods
-
           attr_accessor :source_method
           alias_method :source, :source_method=
 
@@ -27,8 +27,8 @@ module Resque
             @table_block = block
           end
 
-          def column(name, value)
-            add_column_header(name) || add_column_cell(value)
+          def column(name, value, options = {})
+            add_column_header(name) || add_column_cell(value, options)
           end
 
           def init_table
@@ -40,12 +40,15 @@ module Resque
             @table_header << encoded_string(column_name) if @header_collecting
           end
 
-          def add_column_cell(column_value)
+          def add_column_cell(column_value, options = {})
             return if @header_collecting
 
             if column_value.is_a? Symbol
-              # Smells bad... changes input variable
-              column_value = @instance.send(column_value, @row_object)
+              column_value = @row_object[column_value]
+            end
+
+            if (formatter_name = options[:formatter])
+              column_value = send("#{formatter_name}_formatter".to_sym, column_value)
             end
 
             @table_row << encoded_string(column_value)
@@ -54,7 +57,8 @@ module Resque
           def build_table_row(row_object)
             @header_collecting = false
 
-            @row_object = row_object # for instance decorate methods calls
+            @row_object = row_object.is_a?(Hash) ? row_object.with_indifferent_access : row_object
+
             row = @table_block.call(@row_object)
 
             finish_row

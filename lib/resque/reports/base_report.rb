@@ -18,9 +18,13 @@ module Resque
     #     end
     #   end
     #
-    # BaseReport provides followed DSL, example:
+    # BaseReport provides following DSL, example:
     #
     #   class CustomReport < CustomTypeReport
+    #     # include Resque::Reports::Common::BatchedReport
+    #     #   overrides data retrieving to achieve batching
+    #     #   if included 'source :select_data' becomes needless
+    #
     #     queue :custom_reports # Resque queue name
     #     source :select_data # method called to retrieve report data
     #     encoding UTF8 # file encoding
@@ -33,12 +37,19 @@ module Resque
     #       column 'Column 1 Header', :decorate_one
     #       column 'Column 2 Header', decorate_two(element[1])
     #       column 'Column 3 Header', 'Column 3 Cell'
+    #       column 'Column 4 Header', :formatted_four, formatter: :just_cute
     #     end
     #
-    #     # Class initialize
+    #     # Class initialize if needed
     #     # NOTE: must be used instead of define 'initialize' method
+    #     # Default behaviour is to receive in *args Hash with report attributes
+    #     # like: CustomReport.new(main_param: 'value') => calls send(:main_param=, 'value')
     #     create do |param|
     #       @main_param = param
+    #     end
+    #
+    #     def self.just_cute_formatter(column_value)
+    #       "I'm so cute #{column_value}"
     #     end
     #
     #     # decorate method, called by symbol-name
@@ -143,6 +154,12 @@ module Resque
         if create_block
           define_singleton_method(:create_dispatch, create_block)
           create_dispatch(*args)
+        else
+          if args && (attrs_hash = args.first) && attrs_hash.is_a?(Hash)
+            attrs_hash.each do |name, value|
+              send("#{name}=", value)
+            end
+          end
         end
 
         @args = args
