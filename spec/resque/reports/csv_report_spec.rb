@@ -23,7 +23,7 @@ class MyCsvReport < Resque::Reports::CsvReport
     @main_param = param
   end
 
-  def self.cute_third_formatter(column_value)
+  def cute_third_formatter(column_value)
     "3'rd row element is: #{column_value}"
   end
 
