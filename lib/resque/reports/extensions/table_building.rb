@@ -48,7 +48,7 @@ module Resque
             end
 
             if (formatter_name = options[:formatter])
-              column_value = send("#{formatter_name}_formatter".to_sym, column_value)
+              column_value = @instance.send("#{formatter_name}_formatter".to_sym, column_value)
             end
 
             @table_row << encoded_string(column_value)
