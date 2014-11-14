@@ -28,6 +28,13 @@ module Resque
           end
 
           def column(name, value, options = {})
+            if options[:skip_if].present?
+              if options[:skip_if].is_a?(Symbol)
+                return if @instance.send(options.delete(:skip_if))
+              elsif options[:skip_if].respond_to?(:call)
+                return if options.delete(:skip_if).call
+              end
+            end
             add_column_header(name) || add_column_cell(value, options)
           end
 

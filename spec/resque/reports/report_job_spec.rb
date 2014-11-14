@@ -32,10 +32,10 @@ describe Resque::Reports::ReportJob do
   end
 
   describe '.execute' do
-    before { Reports::MyCsvReport.stub(new: my_report) }
+    before { allow(Reports::MyCsvReport).to receive(:new).and_return(my_report) }
 
     context 'when building report' do
-      before { my_report.stub(build: nil) }
+      before { allow(my_report).to receive(:build).and_return(nil) }
 
       it do
         expect(Reports::MyCsvReport)
@@ -60,24 +60,24 @@ describe Resque::Reports::ReportJob do
 
     context 'when events are firing' do
       before do
-        described_class.stub(get_meta: {})
-        described_class.get_meta.stub(save: true)
+        allow(described_class).to receive(:get_meta).and_return({})
+        allow(described_class.get_meta).to receive(:save).and_return(true)
       end
 
       context 'when progress total is zero' do
         before do
-          my_report.stub(select_data: [])
-          my_report.stub(data_size: 0)
+          allow(my_report).to receive(:select_data).and_return([])
+          allow(my_report).to receive(:data_size).and_return(0)
         end
 
-        it { described_class.should_not_receive(:at) }
+        it { expect(described_class).to_not receive(:at) }
 
         after { described_class.execute(*exec_params) }
       end
 
       context 'when works default handlers' do
         context 'when error occurs' do
-          before { my_report.stub(:build_table_row) { fail 'Custom error' } }
+          before { allow(my_report).to receive(:build_table_row) { fail 'Custom error' } }
 
           it do
             expect { described_class.execute(*exec_params) }
@@ -86,7 +86,7 @@ describe Resque::Reports::ReportJob do
         end
 
         context 'when progress is changed' do
-          it { described_class.should_receive(:at).with(2, 2, nil) }
+          it { expect(described_class).to receive(:at).with(2, 2, nil) }
 
           after { described_class.execute(*exec_params) }
         end
@@ -95,28 +95,21 @@ describe Resque::Reports::ReportJob do
       context 'when works custom handlers' do
         context 'when error occurs' do
           before do
-            my_report.stub(:error_message) { |e| fail "Boom! #{e.message}" }
-            my_report.stub(:build_table_row) { fail 'Custom error' }
+            allow(my_report).to receive(:error_message) { |e| fail "Boom! #{e.message}" }
+            allow(my_report).to receive(:build_table_row) { fail 'Custom error' }
           end
 
-          it do
-            expect { described_class.execute(*exec_params) }
-              .to raise_error('Boom! Custom error')
-          end
+          it { expect { described_class.execute(*exec_params) }.to raise_error('Boom! Custom error') }
         end
 
         context 'when progress is changed' do
           before do
-            my_report.stub(:progress_message) do |progress, total|
+            allow(my_report).to receive(:progress_message) do |progress, total|
               "my progress: #{progress} / #{total}"
             end
           end
 
-          it do
-            described_class
-              .should_receive(:at)
-              .with(2, 2, 'my progress: 2 / 2')
-          end
+          it { expect(described_class).to receive(:at).with(2, 2, 'my progress: 2 / 2') }
 
           after { described_class.execute(*exec_params) }
         end
@@ -125,14 +118,11 @@ describe Resque::Reports::ReportJob do
       context 'when task is performed by resque' do
         context 'when error occurs' do
           before do
-            my_report.stub(:error_message) { |e| fail "Boom! #{e.message}" }
-            my_report.stub(:build_table_row) { fail 'Custom error' }
+            allow(my_report).to receive(:error_message) { |e| fail "Boom! #{e.message}" }
+            allow(my_report).to receive(:build_table_row) { fail 'Custom error' }
           end
 
-          it do
-            expect { described_class.execute(*exec_params) }
-              .to raise_error('Boom! Custom error')
-          end
+          it { expect { described_class.execute(*exec_params) }.to raise_error('Boom! Custom error') }
         end
       end
     end

@@ -2,8 +2,6 @@
 require 'spec_helper'
 require 'stringio'
 
-require 'resque-reports'
-
 class MyTypeReport < Resque::Reports::BaseReport
   extension :type
 
@@ -51,15 +49,15 @@ describe 'Resque::Reports::BaseReport successor' do
   let(:dummy) { Resque::Reports::Extensions::Dummy.new }
 
   describe '#extension' do
-    before { File.stub(:exists? => true) }
+    before { allow(File).to receive(:exists?).and_return(true) }
 
-    it { File.extname(my_report.filename).should eq '.type' }
+    it { expect(File.extname(my_report.filename)).to eq '.type' }
   end
 
   describe '#source' do
-    before { my_report.stub(select_data: [dummy]) }
+    before { allow(my_report).to receive(:select_data).and_return([dummy]) }
 
-    it { my_report.should_receive(:select_data) }
+    it { expect(my_report).to receive(:select_data) }
 
     after { my_report.build true }
   end
@@ -68,32 +66,32 @@ describe 'Resque::Reports::BaseReport successor' do
     subject { my_report.instance_variable_get(:@cache_file) }
     let(:tmpdir) { File.join(Dir.tmpdir, 'resque-reports') }
 
-    it { subject.instance_variable_get(:@dir).should eq tmpdir }
+    it { expect(subject.instance_variable_get(:@dir)).to eq tmpdir }
   end
 
   describe '#create' do
-    it { my_report.instance_variable_get(:@main_param).should eq 'test' }
+    it { expect(my_report.instance_variable_get(:@main_param)).to eq 'test' }
   end
 
   describe '#encoding' do
     subject { my_report.instance_variable_get(:@cache_file) }
     let(:utf_coding) { Resque::Reports::Extensions::Encodings::UTF8 }
 
-    it { subject.instance_variable_get(:@coding).should eq utf_coding }
+    it { expect(subject.instance_variable_get(:@coding)).to eq utf_coding }
   end
 
   describe '#write' do
     subject { MyReport.new('#write test') }
 
     before do
-      subject.stub(:data_each) { |&block| block.call(dummy) }
-      subject.stub(build_table_row: ['row'])
-      subject.stub(build_table_header: ['header'])
+      allow(subject).to receive(:data_each) { |&block| block.call(dummy) }
+      allow(subject).to receive(:build_table_row).and_return(['row'])
+      allow(subject).to receive(:build_table_header).and_return(['header'])
 
       subject.write(io)
     end
 
-    it { io.string.should eq "header\r\nrow\r\n" }
+    it { expect(io.string).to eq "header\r\nrow\r\n" }
   end
 
   describe '#bg_build' do
@@ -102,13 +100,10 @@ describe 'Resque::Reports::BaseReport successor' do
     context 'when report is building twice' do
       subject { MyReport.new('#bg_build test') }
 
-      before { job_class.stub(enqueue_to: 'job_id') }
+      before { allow(job_class).to receive(:enqueue_to).and_return('job_id') }
 
       it do
-        job_class
-          .should_receive(:enqueue_to).twice
-          #.with(:my_type_reports, 'MyReport', '["#bg_build test",true]')
-
+        expect(job_class).to receive(:enqueue_to).twice
       end
 
       after do
@@ -119,44 +114,41 @@ describe 'Resque::Reports::BaseReport successor' do
     context 'when report is building' do
       subject { MyReport.new('#bg_build test') }
 
-      before { job_class.stub(enqueue_to: 'job_id') }
+      before { allow(job_class).to receive(:enqueue_to).and_return('job_id') }
 
-      it do
-        job_class
-          .should_receive(:enqueue_to)
-          #.with(:my_type_reports, 'MyReport', '["#bg_build test",true]')
-      end
+      it { expect(job_class).to receive(:enqueue_to) }
 
-      after  { subject.bg_build true }
+      after { subject.bg_build true }
     end
 
     context 'when report is not build yet' do
       subject { MyReport.new('#bg_build test') }
 
       before do
-        job_class.stub(enqueued?: double('Meta', meta_id: 'enqueued_job_id'))
+        allow(job_class).to receive(:enqueued?).and_return(double('Meta', meta_id: 'enqueued_job_id'))
       end
 
-      it { subject.bg_build(true).should eq 'enqueued_job_id' }
+      it { expect(subject.bg_build(true)).to eq 'enqueued_job_id' }
     end
   end
 
   describe '#build' do
-    subject { MyReport.new('#build test') }
+    context 'when report decorated' do
+      subject { MyReport.new('#build test') }
 
-    it { subject.should_receive(:decorate_second).exactly(3).times }
+      it { expect(subject).to receive(:decorate_second).exactly(3).times }
 
-    after  { subject.build true }
-
+      after  { subject.build true }
+    end
     context 'when report was built' do
       subject { MyReport.new('was built test') }
 
       before { subject.build true }
 
-      its(:exists?) { should be_true }
+      it { expect(subject).to be_exists }
       it do
-        File.read(subject.filename)
-          .should eq <<-REPORT.gsub(/^ {12}/, '')
+        expect(File.read(subject.filename))
+          .to eq <<-REPORT.gsub(/^ {12}/, '')
             First one|Second\r
             one|one - is second\r
             was built test|was built test - is second\r
@@ -168,7 +160,7 @@ describe 'Resque::Reports::BaseReport successor' do
   describe '#data_each' do
     subject { MyReport.new('#data_each test') }
 
-    it { subject.should_receive(:data_each) }
+    it { expect(subject).to receive(:data_each) }
 
     after { subject.write(io) }
   end
@@ -176,7 +168,7 @@ describe 'Resque::Reports::BaseReport successor' do
   describe '#build_table_header' do
     subject { MyReport.new('#build_table_header test') }
 
-    it { subject.should_receive(:build_table_header) }
+    it { expect(subject).to receive(:build_table_header) }
 
     after { subject.write(io) }
   end
@@ -184,7 +176,7 @@ describe 'Resque::Reports::BaseReport successor' do
   describe '#build_table_row' do
     subject { MyReport.new('#build_table_row test') }
 
-    it { subject.should_receive(:build_table_row).twice }
+    it { expect(subject).to receive(:build_table_row).twice }
 
     after { subject.write(io) }
   end

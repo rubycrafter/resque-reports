@@ -1,3 +1,4 @@
+require 'tempfile'
 # coding: utf-8
 module Resque
   module Reports
@@ -33,16 +34,28 @@ module Resque
       def open(force = false)
         prepare_cache_dir
 
-        force ? FileUtils.rm_f(@filename) : return if File.exists?(@filename)
+        (force ? clear : return) if File.exists?(@filename)
 
-        remove_unfinished_on_error do
-          File.open(@filename, "w:#{@coding}") do |file|
-            yield file
-          end
+        with_tempfile do |tempfile|
+          yield tempfile
+
+          tempfile.close
+          FileUtils.cp(tempfile.path, @filename)
         end
       end
 
+      def clear
+        FileUtils.rm_f(@filename)
+      end
+
       protected
+
+      def with_tempfile
+        yield(tempfile = Tempfile.new(Digest::MD5.hexdigest(@filename), :encoding => @coding))
+      ensure
+        tempfile.close unless tempfile.closed?
+        tempfile.try(:unlink)
+      end
 
       def prepare_cache_dir
         FileUtils.mkdir_p @dir # create folder if not exists
@@ -66,16 +79,6 @@ module Resque
         Dir.new(@dir)
            .map { |fname| File.join(@dir, fname) if File.extname(fname) == @ext }
            .compact
-      end
-
-      def remove_unfinished_on_error
-        yield
-      rescue => error
-        # remove everything that was written due to it inconsistance
-        FileUtils.rm_f @filename
-
-        # don't suppress any errors here
-        raise error
       end
     end
   end
