@@ -57,7 +57,7 @@ describe 'Resque::Reports::CsvReport successor' do
       subject { MyCsvDefaultsReport.new }
 
       it 'sets csv_options defaults' do
-        subject.options.should eq MyCsvReport::DEFAULT_CSV_OPTIONS
+        expect(subject.options).to eq MyCsvReport::DEFAULT_CSV_OPTIONS
       end
     end
 
@@ -69,7 +69,7 @@ describe 'Resque::Reports::CsvReport successor' do
       end
 
       it 'merges csv_options with defaults' do
-        subject.options.should eq my_options
+        expect(subject.options).to eq my_options
       end
     end
   end
@@ -78,12 +78,12 @@ describe 'Resque::Reports::CsvReport successor' do
     context 'when report was built' do
       subject { MyCsvReport.new('was built test') }
 
-      before { subject.build true }
+      after { subject.build true }
 
-      its(:exists?) { should be_true }
+      it { expect(subject).to be_exists }
       it do
-        File.read(subject.filename)
-          .should eq <<-CSV.gsub(/^ {12}/, "")
+        expect(File.read(subject.filename))
+          .to eq <<-CSV.gsub(/^ {12}/, '')
             First one,Second,Third
             decorated: one,was built test - is second,3'rd row element is: 3
           CSV

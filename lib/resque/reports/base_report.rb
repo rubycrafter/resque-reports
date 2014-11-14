@@ -76,17 +76,18 @@ module Resque
         protected
 
         attr_reader :create_block
-        attr_accessor :file_extension,
-                      :file_encoding,
-                      :file_directory,
-                      :job_queue
+        attr_accessor :_extension,
+                      :_encoding,
+                      :_directory,
+                      :_queue,
+                      :_output_filename
 
-        alias_method :super_extension, :file_extension
-        alias_method :extension, :file_extension=
-        alias_method :set_extension, :file_extension=
-        alias_method :encoding, :file_encoding=
-        alias_method :directory, :file_directory=
-        alias_method :queue, :job_queue=
+        alias_method :super_extension, :_extension
+        alias_method :extension, :_extension=
+        alias_method :encoding, :_encoding=
+        alias_method :directory, :_directory=
+        alias_method :queue, :_queue=
+        alias_method :output_filename, :_output_filename=
 
         def set_instance(obj)
           @instance = obj
@@ -98,7 +99,7 @@ module Resque
 
         # override for Extenstions::TableBuilding, to use custom encoding
         def encoded_string(obj)
-          obj.to_s.encode(file_encoding,
+          obj.to_s.encode(_encoding,
                           invalid: :replace,
                           undef: :replace)
         end
@@ -124,7 +125,6 @@ module Resque
       # Constants #
       #++
 
-      DEFAULT_EXTENSION = 'txt'
       DEFAULT_QUEUE = :base
 
       #--
@@ -132,16 +132,28 @@ module Resque
       #++
 
       def_delegators Const::TO_EIGENCLASS,
-                     :file_directory,
-                     :file_extension,
-                     :file_encoding,
+                     :_directory,
+                     :_extension,
+                     :_encoding,
+                     :_queue,
                      :create_block,
                      :set_instance,
-                     :set_extension,
-                     :job_queue
+                     :_extension=
 
       def_delegators :@cache_file, :filename, :exists?, :ready?
       def_delegator Const::TO_SUPER, :super_extension
+
+      attr_reader :job_id
+
+      def self.build(options = {})
+        in_background = options.delete(:background)
+        force = options.delete(:force)
+        report = new(options)
+
+        in_background ? report.bg_build(force) : report.build(force)
+
+        report
+      end
 
       #--
       # Public instance methods
@@ -156,9 +168,7 @@ module Resque
           create_dispatch(*args)
         else
           if args && (attrs_hash = args.first) && attrs_hash.is_a?(Hash)
-            attrs_hash.each do |name, value|
-              send("#{name}=", value)
-            end
+            attrs_hash.each { |name, value| send("#{name}=", value) }
           end
         end
 
@@ -182,20 +192,20 @@ module Resque
         args_json = [*@args, force].to_json
 
         # Check report if it already in progress and tring return its job_id...
-        job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
+        @job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
 
         # ...and start new job otherwise
-        job_id || ReportJob.enqueue_to(job_queue || DEFAULT_QUEUE, report_class, args_json).try(:meta_id)
+        @job_id ||= ReportJob.enqueue_to(_queue || DEFAULT_QUEUE, report_class, args_json).try(:meta_id)
       end
 
       protected
 
       def init_cache_file
-        set_extension super_extension || DEFAULT_EXTENSION
+        self._extension = super_extension || DEFAULT_EXTENSION
 
-        @cache_file = CacheFile.new(file_directory,
-                                    generate_filename(@args, file_extension),
-                                    coding: file_encoding)
+        @cache_file = CacheFile.new(_directory,
+                                    generate_filename(@args, _extension),
+                                    coding: _encoding)
       end
 
       # Method specifies how to output report data

@@ -32,7 +32,7 @@ module Resque
         base.send :include, EventCallbacks # event callbacks and handlers
         base.send :include, EventTemplates # template events handling methods
         base.send :include, Encodings # encoding constants
-        base.send :include, EnqueueToFix # encoding constants
+        base.send :include, EnqueueToFix # enqueue task to exact queue
       end
     end
   end

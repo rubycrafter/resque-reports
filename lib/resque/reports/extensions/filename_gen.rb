@@ -14,10 +14,12 @@ module Resque
       #   end
       module FilenameGen
 
+        DEFAULT_EXTENSION = 'txt'
+
         private
 
         def generate_filename(args, fextension)
-          "#{ hash(self.class.to_s, *args) }.#{ fextension }"
+          "#{ hash(self.class.to_s, *args) }.#{ fextension || DEFAULT_EXTENSION }"
         end
 
         def hash(*args)
