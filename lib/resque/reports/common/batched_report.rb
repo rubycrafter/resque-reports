@@ -13,7 +13,7 @@ module Resque
         #
         # Returns connection adapter
         def connection
-          raise NotImplementedError
+          ActiveRecord::Base.connection
         end
 
         # Internal: Выполняет запрос отчета пачками и выполняет block для каждой пачки
