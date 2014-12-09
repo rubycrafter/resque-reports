@@ -41,6 +41,7 @@ module Resque
 
           tempfile.close
           FileUtils.cp(tempfile.path, @filename)
+          FileUtils.chmod(0644, @filename)
         end
       end
 
