@@ -51,6 +51,22 @@ class MyCsvDefaultsReport < Resque::Reports::CsvReport
   end
 end
 
+class MyCsvExpiredReport < Resque::Reports::CsvReport
+  expire_in 3600
+  source :select_data
+  encoding UTF8
+
+  directory File.join(Dir.tmpdir, 'resque-reports')
+
+  table do |element|
+    column 'Uno', "#{element} - is value"
+  end
+
+  def select_data
+    []
+  end
+end
+
 describe 'Resque::Reports::CsvReport successor' do
   describe '.csv_options' do
     context 'when custom options not set' do
@@ -87,6 +103,26 @@ describe 'Resque::Reports::CsvReport successor' do
             First one,Second,Third
             decorated: one,was built test - is second,3'rd row element is: 3
           CSV
+      end
+    end
+  end
+
+  describe '#exists?' do
+    context 'when report was built' do
+      subject { MyCsvExpiredReport.new }
+
+      before { subject.build }
+
+      it do
+        Timecop.travel(1.hour.since) do
+          expect(subject.exists?).to be_false
+        end
+      end
+
+      it do
+        Timecop.travel(30.minutes.since) do
+          expect(subject.exists?).to be_true
+        end
       end
     end
   end
