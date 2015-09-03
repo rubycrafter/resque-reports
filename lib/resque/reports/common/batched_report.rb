@@ -122,7 +122,7 @@ module Resque
           query.project(Arel.sql(select))
                .take(batch_size)
                .skip(offset)
-               .order(order_by)
+               .order(order)
                .to_sql
         end
       end
