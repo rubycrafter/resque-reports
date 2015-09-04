@@ -94,10 +94,9 @@ module Resque
         # Internal: Порядок строк отчета
         #
         # Returns String (SQL)
-        def order
+        def order_by
           nil
         end
-        alias_method :order_by, :order
 
         # Internal: Фильтры отчета
         #
@@ -122,7 +121,7 @@ module Resque
           query.project(Arel.sql(select))
                .take(batch_size)
                .skip(offset)
-               .order(order)
+               .order(order_by)
                .to_sql
         end
       end
