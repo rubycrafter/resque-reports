@@ -115,13 +115,13 @@ describe 'Resque::Reports::CsvReport successor' do
 
       it do
         Timecop.travel(1.hour.since) do
-          expect(subject.exists?).to be_false
+          expect(subject.exists?).to be_falsey
         end
       end
 
       it do
         Timecop.travel(30.minutes.since) do
-          expect(subject.exists?).to be_true
+          expect(subject.exists?).to be_truthy
         end
       end
     end
