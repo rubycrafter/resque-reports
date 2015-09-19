@@ -12,8 +12,8 @@ module Resque
     #    ReportJob.enqueue_to(:my_queue, 'Resque::Reports::MyReport', [1, 2].to_json)
     #
     class ReportJob
-      include Resque::Integration
-      extend Extensions::EnqueueToFix
+      include Resque::Integration # ??? нужная зависимость?
+      extend Patches::EnqueueTo
 
       unique
 
@@ -40,13 +40,13 @@ module Resque
       def self.init_report(report_class, args_array)
         report = report_class.new(*args_array)
 
-        report_class.on_progress do |progress, total|
+        report.progress_handler do |progress, total|
           unless total.zero?
             at(progress, total, report.progress_message(progress, total))
           end
         end
 
-        report_class.on_error do |error|
+        report.error_handler do |error|
           meta = get_meta(@meta_id)
           meta['payload'] ||= {'error_messages' => []}
           meta['payload']['error_messages'] << report.error_message(error)

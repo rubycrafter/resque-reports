@@ -9,24 +9,11 @@ module Resque
     #   2. source, is symbol of method that retrieves report data
     #   3. table, report table configuration using DSL
     class CsvReport < BaseReport
-      extend Forwardable
-
-      class << self
-        attr_accessor :options
-
-        alias_method :csv_options, :options=
-      end
-
-      DEFAULT_CSV_OPTIONS = {col_sep: ';', row_sep: "\r\n"}
-
-      extension :csv
-
-      def_delegators TO_EIGENCLASS, :options, :csv_options
+      attr_reader :csv_options
 
       def initialize(*args)
-        csv_options DEFAULT_CSV_OPTIONS.merge(options || Hash.new)
-
         super(*args)
+        @csv_options = config.csv_options
       end
 
       def write(io, force = false)
@@ -38,20 +25,20 @@ module Resque
         #                                 (same order as header)
         progress = 0
 
-        CSV(io, options) do |csv|
-          write_line csv, build_table_header
+        CSV(io, csv_options) do |csv|
+          write_line csv, table.build_header
 
-          data_each(force) do |data_element|
+          iterator.data_each(force) do |data_element|
             begin
-              write_line csv, build_table_row(data_element)
+              write_line csv, table.build_row(data_element)
             rescue
-              handle_error
+              events_handler.error
             end
 
-            handle_progress(progress += 1, data_size)
+            events_handler.progress(progress += 1, iterator.data_size)
           end
 
-          handle_progress(progress, data_size, true)
+          events_handler.progress(progress, iterator.data_size, true)
         end
       end
 
@@ -62,6 +49,11 @@ module Resque
       #--
       # Event handling #
       #++
+      #
+
+      def progress_message(*args)
+        'Выгрузка отчета в CSV'
+      end
 
       def error_message(error)
         error_message = []

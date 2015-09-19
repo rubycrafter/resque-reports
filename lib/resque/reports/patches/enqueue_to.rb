@@ -3,8 +3,8 @@ require 'resque/plugins/progress'
 
 module Resque
   module Reports
-    module Extensions
-      module EnqueueToFix
+    module Patches
+      module EnqueueTo
         def self.extended(base)
           base.extend(Resque::Plugins::Progress)
           base.extend(ClassMethods)

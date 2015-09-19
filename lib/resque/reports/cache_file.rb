@@ -6,15 +6,14 @@ module Resque
     # NOTE: Every time any cache file is opening,
     #       cache is cleared from old files.
     class CacheFile
-      include Extensions::Encodings
-
       DEFAULT_EXPIRE_TIME = 86_400
-      DEFAULT_CODING = UTF8
+      DEFAULT_CODING = 'utf-8'.freeze
 
+      attr_reader :dir, :ext, :coding, :expiration_time
       def initialize(dir, filename, options = {})
         @dir = dir
         @filename = File.join(dir, filename)
-        @ext = File.extname(filename)
+        @ext = File.extname(@filename)
 
         # options
         @coding = options[:coding] || DEFAULT_CODING
@@ -27,7 +26,7 @@ module Resque
       alias_method :ready?, :exists?
 
       def filename
-        fail 'File doesn\'t exists, check exists? before' unless exists?
+        fail 'File doesn\'t exist, check exists? before' unless exists?
         @filename
       end
 
@@ -52,37 +51,32 @@ module Resque
       protected
 
       def with_tempfile
-        yield(tempfile = Tempfile.new(Digest::MD5.hexdigest(@filename), :encoding => @coding))
+        yield(tempfile = Tempfile.new(Digest::MD5.hexdigest(@filename), :encoding => coding))
       ensure
-        if tempfile
-          tempfile.close unless tempfile.closed?
-          tempfile.unlink
-        end
+        return unless tempfile
+        tempfile.close unless tempfile.closed?
+        tempfile.unlink
       end
 
       def prepare_cache_dir
-        FileUtils.mkdir_p @dir # create folder if not exists
-
+        FileUtils.mkdir_p dir # create folder if not exists
         clear_expired_files
       end
 
       def clear_expired_files
         # TODO: avoid races when worker building
         #       his report longer than @expiration_time
-        files_to_delete = cache_files_array.select { |fname| expired?(fname) }
-
-        FileUtils.rm_f files_to_delete
+        FileUtils.rm_f cache_files_array.select { |fname| expired?(fname) }
       end
 
       def expired?(fname)
         return true unless File.file?(fname)
-
-        File.mtime(fname) + @expiration_time < Time.now
+        File.mtime(fname) + expiration_time < Time.current
       end
 
       def cache_files_array
-        Dir.new(@dir)
-           .map { |fname| File.join(@dir, fname) if File.extname(fname) == @ext }
+        Dir.new(dir)
+           .map { |fname| File.join(dir, fname) if File.extname(fname) == ext }
            .compact
       end
     end

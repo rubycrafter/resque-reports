@@ -1,42 +1,15 @@
-# coding: utf-8
 module Resque
   module Reports
-    module Common
-      module BatchedReport
-        extend ActiveSupport::Concern
+    module Services
+      class QueryBuilder
+        extend Forwardable
+        pattr_initialize :report
 
-        included do
-          BATCH_SIZE = 10_000
-        end
+        def_delegator :connection, :execute
 
-        # Internal: Подключение используемое для выполнения запросов
-        #
-        # Returns connection adapter
         def connection
           ActiveRecord::Base.connection
         end
-
-        # Internal: Выполняет запрос отчета пачками и выполняет block для каждой пачки
-        #   Переопредленный метод из Resque::Reports
-        #
-        # Returns Nothing
-        def data_each(force = false)
-          0.step(data_size, batch_size) do |batch_offset|
-            connection.execute(batched_query(batch_offset)).each do |element|
-              yield element
-            end
-          end
-        end
-
-        # Internal: Возвращает общее кол-во строк в отчете
-        #   Переопредленный метод из Resque::Reports
-        #
-        # Returns Fixnum
-        def data_size
-          @data_size ||= connection.execute(count_query)[0]['count'].to_i
-        end
-
-        protected
 
         # Internal: Возвращает отфильтрованный запрос отчета
         #
@@ -109,7 +82,7 @@ module Resque
         # Internal: Запрос количества строк в отчете
         #
         # Returns String (SQL)
-        def count_query
+        def count
           query.project(Arel.sql('COUNT(*) as count')).to_sql
         end
 
@@ -118,9 +91,9 @@ module Resque
         #   offset - Numeric, число строк на которое сдвигается запрос
         #
         # Returns String (SQL)
-        def batched_query(offset)
+        def take_batch(limit, offset)
           query.project(Arel.sql(select))
-               .take(batch_size)
+               .take(limit)
                .skip(offset)
                .order(order)
                .to_sql

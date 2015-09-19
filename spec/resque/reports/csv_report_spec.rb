@@ -5,65 +5,93 @@ require 'stringio'
 require 'resque/reports/csv_report'
 
 class MyCsvReport < Resque::Reports::CsvReport
-  queue :csv_reports
-  source :select_data
-  encoding UTF8
+  config(
+    queue: :csv_reports,
+    source: :select_data,
+    encoding: 'utf-8',
+    csv_options: {col_sep: ',', row_sep: "\n"},
+    directory: File.join(Dir.home, '.resque-reports')
+  )
 
-  csv_options col_sep: ',', row_sep: "\n"
-
-  directory File.join(Dir.home, '.resque-reports')
-
-  table do |element|
-    column 'First one', decorate_first(element[:first])
-    column 'Second', "#{element[:second]} - is second"
+  table do |row|
+    column 'First one', decorate_first(row[:first])
+    column 'Second', "#{row[:second]} - is second"
     column 'Third', :third, formatter: :cute_third
   end
 
-  create do |param|
+  attr_reader :main_param
+  def initialize(param)
+    super
     @main_param = param
   end
 
-  def cute_third_formatter(column_value)
+  def self.cute_third(column_value)
     "3'rd row element is: #{column_value}"
   end
 
-  def decorate_first(element)
+  def self.decorate_first(element)
     "decorated: #{element}"
   end
 
-  def select_data
-    [{:first => :one, :second => @main_param, :third => 3}]
+  def formatter
+    self.class
+  end
+
+  def query
+    @query ||= Query.new(self)
+  end
+
+  class Query
+    pattr_initialize :report
+    def select_data
+      [{:first => :one, :second => report.main_param, :third => 3}]
+    end
   end
 end
 
 class MyCsvDefaultsReport < Resque::Reports::CsvReport
-  source :select_data
-  encoding UTF8
-
-  directory File.join(Dir.tmpdir, 'resque-reports')
+  config(
+    source: :select_data,
+    encoding: 'utf-8',
+    directory: File.join(Dir.tmpdir, 'resque-reports')
+  )
 
   table do |element|
     column 'Uno', "#{element} - is value"
   end
 
-  def select_data
-    []
+  def query
+    Query.new
+  end
+
+  class Query
+    def select_data
+      []
+    end
   end
 end
 
 class MyCsvExpiredReport < Resque::Reports::CsvReport
-  expire_in 3600
-  source :select_data
-  encoding UTF8
+  config(
+    expire_in: 3600,
+    source: :select_data,
+    encoding: 'utf-8',
+    directory: File.join(Dir.tmpdir, 'resque-reports')
+  )
 
-  directory File.join(Dir.tmpdir, 'resque-reports')
 
   table do |element|
     column 'Uno', "#{element} - is value"
   end
 
-  def select_data
-    []
+  def query
+    Query.new
+  end
+
+  class Query
+    def select_data
+      []
+    end
   end
 end
 
@@ -73,7 +101,7 @@ describe 'Resque::Reports::CsvReport successor' do
       subject { MyCsvDefaultsReport.new }
 
       it 'sets csv_options defaults' do
-        expect(subject.options).to eq MyCsvReport::DEFAULT_CSV_OPTIONS
+        expect(subject.csv_options).to eq Resque::Reports::Config::DEFAULT_CSV_OPTIONS
       end
     end
 
@@ -81,11 +109,11 @@ describe 'Resque::Reports::CsvReport successor' do
       subject { MyCsvReport.new('csv_options test') }
 
       let(:my_options) do
-        MyCsvReport::DEFAULT_CSV_OPTIONS.merge(col_sep: ',', row_sep: "\n")
+        Resque::Reports::Config::DEFAULT_CSV_OPTIONS.merge(col_sep: ',', row_sep: "\n")
       end
 
       it 'merges csv_options with defaults' do
-        expect(subject.options).to eq my_options
+        expect(subject.csv_options).to eq my_options
       end
     end
   end
@@ -111,7 +139,9 @@ describe 'Resque::Reports::CsvReport successor' do
     context 'when report was built' do
       subject { MyCsvExpiredReport.new }
 
-      before { subject.build }
+      before do
+        subject.build(true)
+      end
 
       it do
         Timecop.travel(1.hour.since) do

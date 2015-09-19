@@ -8,3 +8,7 @@ require 'rspec'
 require 'timecop'
 
 require 'resque-reports'
+
+require 'mock_redis'
+redis = MockRedis.new
+Resque.redis = redis

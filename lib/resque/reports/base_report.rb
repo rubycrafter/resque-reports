@@ -70,147 +70,97 @@ module Resque
     #   end
     class BaseReport
       extend Forwardable
-      include Extensions
 
       class << self
+        attr_reader :config_hash, :table_block, :progress_handle_block, :error_handle_block
 
-        protected
-
-        attr_reader :create_block
-        attr_accessor :_extension,
-                      :_encoding,
-                      :_directory,
-                      :_queue,
-                      :_output_filename,
-                      :_expire_in
-
-        alias_method :super_extension, :_extension
-        alias_method :extension, :_extension=
-        alias_method :encoding, :_encoding=
-        alias_method :directory, :_directory=
-        alias_method :queue, :_queue=
-        alias_method :output_filename, :_output_filename=
-        alias_method :expire_in, :_expire_in=
-
-        def set_instance(obj)
-          @instance = obj
+        def config(hash)
+          @config_hash = hash
         end
 
-        def create(&block)
-          @create_block = block
+        def table(&block)
+          @table_block = block
         end
 
-        # override for Extenstions::TableBuilding, to use custom encoding
-        def encoded_string(obj)
-          obj.to_s.encode(_encoding,
-                          invalid: :replace,
-                          undef: :replace)
+        def build(options = {})
+          in_background = options.delete(:background)
+          force = options.delete(:force)
+          report = new(options)
+
+          in_background ? report.bg_build(force) : report.build(force)
+
+          report
         end
-
-        #--
-        # Hooks #
-        #++
-
-        def method_missing(method_name, *args, &block)
-          if @instance.respond_to?(method_name)
-            @instance.send(method_name, *args, &block)
-          else
-            super
-          end
-        end
-
-        def respond_to?(method, include_private = false)
-          super || @instance.respond_to?(method, include_private)
-        end
-      end # class methods
-
-      #--
-      # Constants #
-      #++
-
-      DEFAULT_QUEUE = :base
-
-      #--
-      # Delegators
-      #++
-
-      def_delegators Const::TO_EIGENCLASS,
-                     :_directory,
-                     :_extension,
-                     :_encoding,
-                     :_queue,
-                     :create_block,
-                     :set_instance,
-                     :_extension=,
-                     :_expire_in
-
-      def_delegators :@cache_file, :filename, :exists?, :ready?
-      def_delegator Const::TO_SUPER, :super_extension
-
-      attr_reader :job_id
-
-      def self.build(options = {})
-        in_background = options.delete(:background)
-        force = options.delete(:force)
-        report = new(options)
-
-        in_background ? report.bg_build(force) : report.build(force)
-
-        report
       end
+
+      attr_reader :args, :job_id, :events_handler
+      def_delegators :cache_file, :filename, :exists?, :ready?
 
       #--
       # Public instance methods
       #++
 
       def initialize(*args)
-        # TODO: Check consistance, fail if user initialized wrong object
-        set_instance(self)
-
-        if create_block
-          define_singleton_method(:create_dispatch, create_block)
-          create_dispatch(*args)
-        else
-          if args && (attrs_hash = args.first) && attrs_hash.is_a?(Hash)
-            attrs_hash.each { |name, value| send("#{name}=", value) }
-          end
-        end
-
         @args = args
-
-        init_cache_file
-        init_table
       end
 
       # Builds report synchronously
       def build(force = false)
-        init_table if force
+        @table = nil if force
+        @events_handler = Services::EventsHandler.new(@progress_handle_block, @error_handle_block)
 
-        @cache_file.open(force) { |file| write(file, force) }
+        cache_file.open(force) { |file| write(file, force) }
       end
 
       # Builds report in background, returns job_id, to watch progress
       def bg_build(force = false)
         report_class = self.class.to_s
 
-        args_json = [*@args, force].to_json
+        args_json = [*args, force].to_json
 
         # Check report if it already in progress and tring return its job_id...
         @job_id = ReportJob.enqueued?(report_class, args_json).try(:meta_id)
 
         # ...and start new job otherwise
-        @job_id ||= ReportJob.enqueue_to(_queue || DEFAULT_QUEUE, report_class, args_json).try(:meta_id)
+        @job_id ||= ReportJob.enqueue_to(config.queue, report_class, args_json).try(:meta_id)
       end
 
-      protected
+      def progress_handler(&block)
+        @progress_handle_block = block
+      end
 
-      def init_cache_file
-        self._extension = super_extension || DEFAULT_EXTENSION
-        options = {coding: _encoding, expire_in: _expire_in}
+      def error_handler(&block)
+        @error_handle_block = block
+      end
 
-        @cache_file = CacheFile.new(_directory,
-                                    generate_filename(@args, _extension),
-                                    options)
+      def formatter
+        nil
+      end
+
+      private
+
+      def query
+        # descendant of QueryBuilder or SqlQuery with #take_batch(limit, offset) method defined
+        # @query ||= Query.new(self)
+        fail NotImplementedError
+      end
+
+      def iterator
+        @iterator ||= Services::DataIterator.new(query, config)
+      end
+
+      def config
+        @config ||= Config.new(self.class.config_hash)
+      end
+
+      def table
+        @table ||= Services::TableBuilder.new(self, self.class.table_block, config)
+      end
+
+      def cache_file
+        @cache_file ||= CacheFile.new(config.directory,
+                                      Services::FilenameGenerator.generate(args, config.extension),
+                                      expire_in: config.expire_in, coding: config.encoding)
       end
 
       # Method specifies how to output report data
@@ -218,15 +168,14 @@ module Resque
       # @param [true, false] force write to output or skip due its existance
       def write(io, force)
         # You must use ancestor methods to work with report data:
-        # 1) data_size => returns source data size (calls #count on data
+        # 1) iterator.data_size => returns source data size (calls #count on data
         #                 retrieved from 'source')
-        # 2) data_each => yields given block for each source data element
-        # 3) build_table_header => returns Array of report column names
-        # 4) build_table_row(object) => returns Array of report cell
+        # 2) iterator.data_each => yields given block for each source data element
+        # 3) table.build_header => returns Array of report column names
+        # 4) table.build_row(object) => returns Array of report cell
         #                               values (same order as header)
-        # 5) progress_message(progress,
-        #                    total) => call to iterate job progress
-        # 6) error_message(error) => call to handle error in job
+        # 5) events_handler.progress(progress, total) => call to iterate job progress
+        # 6) events_handler.error(error) => call to handle error in job
         #
         # HINT: You may override data_size and data_each, to retrieve them
         #       effectively
