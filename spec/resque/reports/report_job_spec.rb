@@ -3,7 +3,7 @@ require 'spec_helper'
 require 'resque-reports'
 
 module Reports
-  class MyCsvReport < Resque::Reports::CsvReport
+  class MyCsvReport < Ruby::Reports::CsvReport
     config(
       queue: :csv_reports,
       source: :select_data,
@@ -55,17 +55,11 @@ describe Resque::Reports::ReportJob do
       it { expect(my_report).to receive(:build).with(true) }
 
       after { described_class.execute(*exec_params) }
-
     end
     context 'when wrong class given' do
       it 'sends invalid class name' do
         expect { described_class.execute('MyWrongReport', '[true]') }
           .to raise_error(NameError)
-      end
-
-      it 'sends class that is not BaseReport successor' do
-        expect { described_class.execute('Object', '[true]') }
-          .to raise_error(RuntimeError)
       end
     end
 
@@ -78,7 +72,7 @@ describe Resque::Reports::ReportJob do
       context 'when progress total is zero' do
         before do
           allow_any_instance_of(Reports::MyCsvReport::Query).to receive(:select_data).and_return([])
-          allow_any_instance_of(Resque::Reports::Services::DataIterator).to receive(:data_size).and_return(0)
+          allow_any_instance_of(Ruby::Reports::Services::DataIterator).to receive(:data_size).and_return(0)
         end
 
         it { expect(described_class).to_not receive(:at) }
@@ -90,7 +84,7 @@ describe Resque::Reports::ReportJob do
         context 'when error occurs' do
           before do
             allow(described_class).to receive(:get_meta).and_return(Hash.new)
-            allow_any_instance_of(Resque::Reports::Services::TableBuilder).to receive(:build_row) { fail 'Custom Error'}
+            allow_any_instance_of(Ruby::Reports::Services::TableBuilder).to receive(:build_row) { fail 'Custom Error' }
           end
 
           it do
@@ -111,7 +105,7 @@ describe Resque::Reports::ReportJob do
           before do
             allow(my_report).to receive(:error_message) { |e| fail "Boom! #{e.message}" }
             allow(described_class).to receive(:get_meta).and_return(Hash.new)
-            allow_any_instance_of(Resque::Reports::Services::TableBuilder).to receive(:build_row) { fail 'Custom Error'}
+            allow_any_instance_of(Ruby::Reports::Services::TableBuilder).to receive(:build_row) { fail 'Custom Error' }
           end
 
           it { expect { described_class.execute(*exec_params) }.to raise_error(RuntimeError) }
@@ -135,7 +129,7 @@ describe Resque::Reports::ReportJob do
           before do
             allow(described_class).to receive(:get_meta).and_return(Hash.new)
             allow(my_report).to receive(:error_message) { |e| fail "Boom! #{e.message}" }
-            allow_any_instance_of(Resque::Reports::Services::TableBuilder).to receive(:build_row) { fail 'Custom Error'}
+            allow_any_instance_of(Ruby::Reports::Services::TableBuilder).to receive(:build_row) { fail 'Custom Error' }
           end
 
           it { expect { described_class.execute(*exec_params) }.to raise_error(RuntimeError) }
