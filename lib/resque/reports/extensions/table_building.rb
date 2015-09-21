@@ -51,7 +51,11 @@ module Resque
             return if @header_collecting
 
             if column_value.is_a? Symbol
-              column_value = @row_object[column_value]
+              column_value = if @row_object.respond_to?(column_value)
+                               @row_object.public_send(column_value)
+                             else
+                               @row_object[column_value]
+                             end
             end
 
             if (formatter_name = options[:formatter])
