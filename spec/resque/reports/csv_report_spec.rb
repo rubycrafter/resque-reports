@@ -67,6 +67,30 @@ class MyCsvExpiredReport < Resque::Reports::CsvReport
   end
 end
 
+
+Person = Struct.new(:first_name, :second_name) do
+  def full_name
+    "#{first_name} #{second_name}"
+  end
+end
+
+class ReportWithObjects < Resque::Reports::CsvReport
+  source :select_data
+  encoding UTF8
+
+  directory File.join(Dir.tmpdir, 'resque-reports')
+
+  table do
+    column 'First name', :first_name
+    column 'Second name', :second_name
+    column 'Full name', :full_name
+  end
+
+  def select_data
+    [Person.new('Steve', 'Jobs')]
+  end
+end
+
 describe 'Resque::Reports::CsvReport successor' do
   describe '.csv_options' do
     context 'when custom options not set' do
@@ -103,6 +127,18 @@ describe 'Resque::Reports::CsvReport successor' do
             First one,Second,Third
             decorated: one,was built test - is second,3'rd row element is: 3
           CSV
+      end
+    end
+
+    context 'when report source data contains decorated objects' do
+      subject(:report) { ReportWithObjects.new }
+
+      it 'builds report with decorated object attributes' do
+        report.build(true)
+
+        report_content = File.read(report.filename)
+
+        expect(report_content).to include 'Steve;Jobs;Steve Jobs'
       end
     end
   end
