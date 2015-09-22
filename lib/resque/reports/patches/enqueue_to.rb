@@ -3,8 +3,8 @@ require 'resque/plugins/progress'
 
 module Resque
   module Reports
-    module Extensions
-      module EnqueueToFix
+    module Patches
+      module EnqueueTo
         def self.extended(base)
           base.extend(Resque::Plugins::Progress)
           base.extend(ClassMethods)
@@ -16,7 +16,7 @@ module Resque
             meta = enqueued?(*args)
             return meta if meta.present?
 
-            meta = Resque::Plugins::Meta::Metadata.new({'meta_id' => meta_id(args), 'job_class' => self.to_s})
+            meta = Resque::Plugins::Meta::Metadata.new('meta_id' => meta_id(args), 'job_class' => to_s)
             meta.save
 
             Resque.enqueue_to(queue, self, meta.meta_id, *args)
