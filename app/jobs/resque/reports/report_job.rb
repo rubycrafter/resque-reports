@@ -14,6 +14,7 @@ module Resque
     class ReportJob
       include Resque::Integration
       extend Extensions::EnqueueToFix
+      require 'slaver'
 
       unique
 
@@ -32,6 +33,11 @@ module Resque
         force = args.pop
 
         init_report(report_class, args).build(force)
+      end
+
+      class << self
+        extend Slavable
+        switch :execute, to: :reports_slave
       end
 
       private
